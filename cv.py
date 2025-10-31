@@ -1,41 +1,26 @@
-# -*- coding: utf-8 -*-
 import cv2
-from pylab import *
 
+# 读取图像
+image = cv2.imread("./images/a.png")  # 确保example.jpg在当前目录下
 
-# 添加中文字体支持
-from matplotlib.font_manager import FontProperties
+# 检查图像是否成功读取
+if image is None:
+    print("无法读取图像。请检查文件路径。")
+    exit()
 
-# 读入图像
-im = cv2.imread('images/a.png')
-# 转换颜色空间
-gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+# 调整图像大小
+resized_image = cv2.resize(image, (800, 600))
+cv2.imwrite('./output/resized_image.png', resized_image)
 
-# 显示积分图像
-fig = plt.figure()
-subplot(121)
-plt.gray()
-imshow(gray)
-axis('off')
+# 获取图像中心
+(h, w) = image.shape[:2]
+center = (w // 2, h // 2)
 
-# 计算积分图像
-intim = cv2.integral(gray)
-# 归一化
-intim = (255.0*intim) / intim.max()
+# 定义旋转矩阵，旋转45度
+M = cv2.getRotationMatrix2D(center, -45, 1.0)
+rotated_image = cv2.warpAffine(image, M, (w, h))
+cv2.imwrite('./output/rotated_image.png', rotated_image)
 
-#显示积分图像
-subplot(122)
-plt.gray()
-imshow(intim)
-axis('off')
-show()
-
-# 用OpenCV显示图像
-#cv2.imshow("Image", intim)
-#cv2.waitKey()
-
-# 用OpenCV保存积分图像
-#cv2.imwrite('../images/ch10/ch10_P211_Displaying-Images-and-Results-cv2.jpg',intim)
-
-# 保存figure中的灰度图像和积分图像
-fig.savefig("./output/a.png")
+# 水平翻转
+flipped_image = cv2.flip(image, 1)
+cv2.imwrite('./output/flipped_image.png', flipped_image)

@@ -1,133 +1,87 @@
-#!/usr/bin/env python3
-"""
-stick_logo_on_cup_v2.py
-改进版：更自然的“贴纸”效果，避免凹凸、变形和裁剪问题
-"""
-
 import cv2
 import numpy as np
 
-def cylindrical_warp(image, curve=0.3):
+def warp_logo_cylinder_final(logo, curve_strength=0.3):
     """
-    简单模拟圆柱形弯曲。
-    curve > 0: 水平弯曲度 (0~1)，越大越弯。
+    最终圆柱弯曲函数，水平收缩模拟圆柱贴合，垂直保持不变。
+    curve_strength: 弯曲强度，0~0.5，越大弯曲越明显
     """
-    h, w = image.shape[:2]
-    radius = w / curve
+    h, w = logo.shape[:2]
     map_x = np.zeros((h, w), np.float32)
     map_y = np.zeros((h, w), np.float32)
 
+    cx = w / 2
     for y in range(h):
         for x in range(w):
-            theta = (x - w/2) / radius
-            map_x[y, x] = radius * np.sin(theta) + w/2
-            map_y[y, x] = y
-    return cv2.remap(image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0,0))
+            theta = (x - cx) / cx * (np.pi/2) * curve_strength  # 左右收缩弧度
+            x_new = cx + np.sin(theta) * cx
+            map_x[y, x] = np.clip(x_new, 0, w-1)
+            map_y[y, x] = y  # 垂直不变
+    warped = cv2.remap(logo, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    return warped
 
-def trim_transparent_border(image, alpha_threshold=5):
+def logo_bottom_center_pro_final(cup_path, logo_path, output_path,
+                                 scale=0.3, margin=20, curve_strength=0.3):
     """
-    去除图像四周的全透明区域，只保留非透明的最小外接矩形。
-    alpha_threshold: 大于该阈值视为非透明
+    将logo贴在杯子下方中间（最终专业版本）
+    功能：
+    - 圆柱弯曲（可见）
+    - 光照融合
+    - alpha混合
+    - 自动下方中间贴合
     """
-    if image.ndim < 3 or image.shape[2] < 4:
-        return image
-    alpha = image[:, :, 3]
-    mask = alpha > alpha_threshold
-    if not np.any(mask):
-        return image
-    coords = np.argwhere(mask)
-    y0, x0 = coords.min(axis=0)
-    y1, x1 = coords.max(axis=0) + 1
-    return image[y0:y1, x0:x1]
+    # 1️⃣ 读取图像
+    cup = cv2.imread(cup_path)
+    logo = cv2.imread(logo_path, cv2.IMREAD_UNCHANGED)
 
-def place_logo(cup_img, logo_img, position="center", scale=0.3, alpha=1.0, curve=0.2):
-    """
-    把 logo 贴到杯子图上（自然贴纸效果）
-    - position: "center" / (x, y)
-    - scale: logo 相对于杯子宽度比例；None 表示自动
-    - alpha: 透明度 0~1
-    - curve: 圆柱弯曲程度
-    """
+    if cup is None or logo is None:
+        raise ValueError("图片读取失败，请检查路径")
 
-    # 转 RGBA
-    if logo_img.shape[2] == 3:
-        logo_img = cv2.cvtColor(logo_img, cv2.COLOR_BGR2BGRA)
-    # 先去除透明边界，再计算宽高
-    logo_img = trim_transparent_border(logo_img, alpha_threshold=5)
-    cup = cup_img.copy()
+    # 2️⃣ 调整logo大小
+    new_w = int(cup.shape[1] * scale)
+    new_h = int(logo.shape[0] * (new_w / logo.shape[1]))
+    logo = cv2.resize(logo, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-    h_cup, w_cup = cup.shape[:2]
-    h_logo, w_logo = logo_img.shape[:2]
+    # 3️⃣ 圆柱弯曲
+    logo = warp_logo_cylinder_final(logo, curve_strength)
 
-    # 自适应缩放：对宽高设置最小/最大占比，确保观感自然
-    # 经验值：宽占比 15%~50%，高占比 8%~35%，默认目标宽占比 35%
-    min_w_ratio, max_w_ratio = 0.15, 0.50
-    min_h_ratio, max_h_ratio = 0.08, 0.35
-    default_w_ratio = 0.35
-
-    # 计算允许的比例范围（以保持在画面内）
-    ratio_max = min((w_cup * max_w_ratio) / max(1, w_logo), (h_cup * max_h_ratio) / max(1, h_logo))
-    ratio_min_target = max((w_cup * min_w_ratio) / max(1, w_logo), (h_cup * min_h_ratio) / max(1, h_logo))
-    ratio_min = min(ratio_min_target, ratio_max)
-
-    # 期望比例：使用传入 scale 或默认值，然后在范围内裁剪
-    if scale is None:
-        desired_ratio = (w_cup * default_w_ratio) / max(1, w_logo)
+    # 4️⃣ alpha通道
+    if logo.shape[2] == 4:
+        alpha = logo[..., 3] / 255.0
+        logo_rgb = logo[..., :3]
     else:
-        desired_ratio = (w_cup * float(scale)) / max(1, w_logo)
-    ratio = max(ratio_min, min(desired_ratio, ratio_max))
+        alpha = np.ones((new_h, new_w))
+        logo_rgb = logo
 
-    target_w = max(1, int(w_logo * ratio))
-    target_h = max(1, int(h_logo * ratio))
-    logo_resized = cv2.resize(logo_img, (target_w, target_h), interpolation=cv2.INTER_AREA)
+    # 5️⃣ 自动计算下方中间位置
+    x = (cup.shape[1] - new_w) // 2
+    y = cup.shape[0] - new_h - margin
+    if y < 0:
+        raise ValueError("logo太大或margin太大，超出杯子范围")
 
-    # 圆柱弯曲
-    if curve > 0:
-        logo_resized = cylindrical_warp(logo_resized, curve=curve)
+    # 6️⃣ 光照融合
+    gray = cv2.cvtColor(cup, cv2.COLOR_BGR2GRAY)
+    light_map = cv2.normalize(gray, None, 0.6, 1.2, cv2.NORM_MINMAX)
+    light_map = cv2.cvtColor(light_map, cv2.COLOR_GRAY2BGR)
+    light_roi = light_map[y:y+new_h, x:x+new_w]
 
-    # 提取 mask
-    b,g,r,a = cv2.split(logo_resized)
-    mask = a.astype(np.float32) / 255.0
-    mask = cv2.GaussianBlur(mask, (7,7), 3)  # 柔化边缘
+    logo_rgb = logo_rgb.astype(np.float32) / 255.0
+    logo_rgb = np.clip(logo_rgb * light_roi, 0, 1)
 
-    # logo 颜色部分
-    logo_rgb = cv2.merge([b,g,r])
+    # 7️⃣ alpha混合
+    roi = cup[y:y+new_h, x:x+new_w].astype(np.float32) / 255.0
+    blended = roi * (1 - alpha[..., None]) + logo_rgb * alpha[..., None]
+    cup[y:y+new_h, x:x+new_w] = (blended * 255).astype(np.uint8)
 
-    # 放置位置：默认将 logo 的中心放在杯子高度的下 2/3 处，并水平居中
-    if position == "center":
-        center_x = w_cup // 2
-        center_y = int(h_cup * (2.0/3.0))
-        x = center_x - logo_rgb.shape[1] // 2
-        y = center_y - logo_rgb.shape[0] // 2
-    else:
-        x, y = position
-
-    # ROI
-    # 保证不越界（如靠近底部时）
-    x = max(0, min(x, w_cup - logo_rgb.shape[1]))
-    y = max(0, min(y, h_cup - logo_rgb.shape[0]))
-
-    x1 = max(0, x)
-    y1 = max(0, y)
-    x2 = min(w_cup, x + logo_rgb.shape[1])
-    y2 = min(h_cup, y + logo_rgb.shape[0])
-
-    roi = cup[y1:y2, x1:x2]
-    logo_part = logo_rgb[0:y2-y1, 0:x2-x1]
-    mask_part = mask[0:y2-y1, 0:x2-x1]
-
-    # alpha 融合
-    blended = (roi * (1 - alpha*mask_part[...,None]) + logo_part * (alpha*mask_part[...,None])).astype(np.uint8)
-    cup[y1:y2, x1:x2] = blended
-
-    return cup
-
-if __name__ == "__main__":
-    cup = cv2.imread("../images/cup.png", cv2.IMREAD_COLOR)
-    logo = cv2.imread("../images/logo22.png", cv2.IMREAD_UNCHANGED)
-
-
-    result = place_logo(cup, logo, scale=0.3, alpha=0.9, curve=0.25)
-
-    cv2.imwrite("cup_logo_result.png", result)
-    print("✅ 已保存 cup_logo_result.png")
+    # 8️⃣ 保存结果
+    cv2.imwrite(output_path, cup)
+    print(f"✅ 已生成最终专业 Mockup效果: {output_path}")
+# === 示例调用 ===
+logo_bottom_center_pro_final(
+    cup_path="../images/cup.png",
+    logo_path="../images/logo1.png",
+    output_path="cup_bottom_center.png",
+    scale=0.4,           # logo宽度占杯子比例
+    margin=20,           # 底部距离
+    curve_strength=0.8   # 弧形强度，越小越平整
+)
