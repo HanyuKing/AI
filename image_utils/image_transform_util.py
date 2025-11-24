@@ -252,6 +252,51 @@ def rotate_image_numpy(img: np.ndarray,
 
     return rotated_img
 
+
+def resize_image(img: np.ndarray,
+                 width: Optional[int] = None,
+                 height: Optional[int] = None,
+                 inter: Optional[int] = None) -> np.ndarray:
+    """调整图像大小
+
+    Args:
+        img: 输入图像
+        width: 目标宽度
+        height: 目标高度
+        inter: 插值方法
+
+    Returns:
+        调整大小后的图像
+    """
+    # 初始化尺寸
+    (h, w) = img.shape[:2]
+
+    # 如果宽度和高度都为None，则返回原图
+    if width is None and height is None:
+        return img
+
+    # 检查是否是单维度指定（保持纵横比）
+    if width is None:
+        # 根据高度计算比例
+        r = height / float(h)
+        dim = (int(w * r), height)
+    elif height is None:
+        # 根据宽度计算比例
+        r = width / float(w)
+        dim = (width, int(h * r))
+    else:
+        # 强制指定尺寸
+        dim = (width, height)
+
+    # 如果未指定插值方法，则使用默认值
+    if inter is None:
+        inter = cv2.INTER_LINEAR
+
+    # 执行调整大小
+    resized = cv2.resize(img, dim, interpolation=inter)
+
+    return resized
+
 def rotate_image(img: np.ndarray, angle: float) -> np.ndarray:
     """以原图中心为基准旋转图片（顺时针为正）"""
 
@@ -280,6 +325,7 @@ def rotate_image(img: np.ndarray, angle: float) -> np.ndarray:
 
     return rotated_img
 
+
 if __name__ == '__main__':
     image = cv2.imread("../images/a.png")
     rotated_image = rotate_image(image, 45)
@@ -287,3 +333,6 @@ if __name__ == '__main__':
 
     rotate_image_numpy = rotate_image_numpy(image, -45, interpolation="nearest")
     cv2.imwrite('../output/rotate_image_numpy.png', rotate_image_numpy)
+
+    resize_image = resize_image(image, 1000, inter=cv2.INTER_CUBIC)
+    cv2.imwrite('../output/resize_image.png', resize_image)
