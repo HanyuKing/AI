@@ -14,9 +14,9 @@ class FileTool:
         Args:
             input_path: 输入PDF文件路径
             output_path: 输出PDF文件路径
-            ratio: 压缩比例 (0.0 < ratio <= 1.0)。
-                   这里解释为目标图片像素总量的比例。
-                   例如 ratio=0.5，图片长宽会缩放为原来的 sqrt(0.5) ~= 0.707。
+            ratio: 期望的文件大小压缩比例 (0.0 < ratio <= 1.0)。
+                   例如 ratio=0.8，目标是让文件大小变为原来的 80%。
+                   (通过将图片像素总量缩放到原来的 ratio 来近似实现)
         """
         if not (0 < ratio <= 1.0):
             raise ValueError("Ratio must be between 0 and 1")
@@ -111,20 +111,24 @@ class FileTool:
     @staticmethod
     def compress_image_by_ratio(input_path: str, output_path: str, ratio: float) -> None:
         """
-        按比例压缩图片尺寸
+        按比例压缩图片 (目标是减小文件大小)
 
         Args:
             input_path: 输入图片路径
             output_path: 输出图片路径
-            ratio: 缩放比例 (0.0 < ratio <= 1.0)
+            ratio: 期望的文件大小压缩比例 (0.0 < ratio <= 1.0)。
+                   例如 ratio=0.5，目标是让文件大小变为原来的 50%。
+                   (通过将长宽缩放到原来的 sqrt(ratio) 来近似实现)
         """
         if not (0 < ratio <= 1.0):
             raise ValueError("Ratio must be between 0 and 1")
 
         with Image.open(input_path) as img:
             width, height = img.size
-            new_width = int(width * ratio)
-            new_height = int(height * ratio)
+            # Scale^2 = ratio => Scale = sqrt(ratio)
+            scale = ratio ** 0.5
+            new_width = int(width * scale)
+            new_height = int(height * scale)
             
             # 使用LANCZOS重采样进行高质量缩放
             resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
