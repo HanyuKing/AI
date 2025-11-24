@@ -54,7 +54,7 @@ class TestFileTool(unittest.TestCase):
         img.save(large_img_path, "JPEG", quality=100)
         
         output_path = os.path.join(self.output_dir, "compressed_size.jpg")
-        target_size_kb = 50
+        target_size_kb = 20
         
         FileTool.compress_image_to_size(large_img_path, output_path, target_size_kb)
         
@@ -72,21 +72,35 @@ class TestFileTool(unittest.TestCase):
     def test_convert_image_format(self):
         print("\n[Test] Image Format Conversion")
         img_path = self.create_dummy_image("original.png")
-        output_path = os.path.join(self.output_dir, "converted.jpg")
+        output_path = os.path.join(self.output_dir, "converted.webp")
         
-        FileTool.convert_image_format(img_path, output_path, "JPEG")
+        FileTool.convert_image_format(img_path, output_path, "WEBP")
         
         with Image.open(output_path) as img:
-            self.assertEqual(img.format, "JPEG")
-            print("PASS: Format converted to JPEG")
+            self.assertEqual(img.format, "WEBP")
+            print("PASS: Format converted to WEBP")
 
     def test_compress_pdf(self):
         print("\n[Test] PDF Compression (File Size)")
-
+        # Create a dummy PDF containing an image
+        img_pdf_path = os.path.join(self.output_dir, "image.pdf")
+        img = Image.new('RGB', (1000, 1000), color='blue')
+        img.save(img_pdf_path, "PDF", resolution=100.0)
+        
+        original_size = os.path.getsize(img_pdf_path)
+        print(f"Original PDF size: {original_size/1024:.2f} KB")
+        
+        output_path = os.path.join(self.output_dir, "compressed.pdf")
+        
         # Compress with ratio 0.5 (target ~50% size)
-        input_path = "./input/test.pdf"
-        output_path = "./output/test_compressed.pdf"
-        FileTool.compress_pdf(input_path, output_path, 0.3)
+        FileTool.compress_pdf(img_pdf_path, output_path, 0.5)
+        
+        new_size = os.path.getsize(output_path)
+        print(f"Compressed PDF size: {new_size/1024:.2f} KB")
+        
+        # Assert size is reduced
+        self.assertLess(new_size, original_size)
+        print(f"PASS: Size reduced by {(1 - new_size/original_size)*100:.1f}%")
 
 
 if __name__ == "__main__":

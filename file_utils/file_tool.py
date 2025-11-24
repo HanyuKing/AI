@@ -204,10 +204,43 @@ class FileTool:
             target_format: 目标格式 (例如 "PNG", "JPEG")。如果为None，则根据output_path后缀推断。
         """
         with Image.open(input_path) as img:
-            # 处理RGBA转JPEG的情况
-            if target_format and target_format.upper() == "JPEG" and img.mode == "RGBA":
-                img = img.convert("RGB")
-            elif output_path.lower().endswith((".jpg", ".jpeg")) and img.mode == "RGBA":
-                img = img.convert("RGB")
+            # 确定目标格式
+            if target_format is None:
+                # 从后缀推断
+                ext = os.path.splitext(output_path)[1].lower()
+                if ext in ['.jpg', '.jpeg']:
+                    target_format = 'JPEG'
+                elif ext == '.png':
+                    target_format = 'PNG'
+                elif ext == '.webp':
+                    target_format = 'WEBP'
+                elif ext == '.bmp':
+                    target_format = 'BMP'
+                elif ext == '.gif':
+                    target_format = 'GIF'
+                elif ext == '.tiff':
+                    target_format = 'TIFF'
+            
+            if target_format:
+                target_format = target_format.upper()
+            
+            # 需要移除Alpha通道的格式列表
+            no_alpha_formats = ['JPEG', 'BMP', 'PCX', 'PPM']
+            
+            # 如果目标格式不支持Alpha，或者强制转为RGB
+            if (target_format in no_alpha_formats) and (img.mode in ['RGBA', 'LA', 'P']):
+                # 如果是P模式（调色板），先转RGBA
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
                 
+                if img.mode in ['RGBA', 'LA']:
+                    # 创建白色背景
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    # 使用alpha通道作为mask进行粘贴
+                    # split()[-1] 获取最后一个通道，即Alpha
+                    background.paste(img, mask=img.split()[-1])
+                    img = background
+                else:
+                    img = img.convert('RGB')
+            
             img.save(output_path, format=target_format)
