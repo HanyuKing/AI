@@ -288,10 +288,6 @@ def resize_image(img: np.ndarray,
         # 强制指定尺寸
         dim = (width, height)
 
-    # 如果未指定插值方法，则使用默认值
-    if inter is None:
-        inter = cv2.INTER_LINEAR
-
     # 执行调整大小
     resized = cv2.resize(img, dim, interpolation=inter)
 
@@ -334,5 +330,5 @@ if __name__ == '__main__':
     rotate_image_numpy = rotate_image_numpy(image, -45, interpolation="nearest")
     cv2.imwrite('../output/rotate_image_numpy.png', rotate_image_numpy)
 
-    resize_image = resize_image(image, 1000, inter=cv2.INTER_CUBIC)
+    resize_image = resize_image(image, 1000)
     cv2.imwrite('../output/resize_image.png', resize_image)
