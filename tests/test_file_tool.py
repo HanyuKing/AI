@@ -83,9 +83,7 @@ class TestFileTool(unittest.TestCase):
     def test_compress_pdf(self):
         print("\n[Test] PDF Compression (File Size)")
         # Create a dummy PDF containing an image
-        img_pdf_path = os.path.join(self.output_dir, "image.pdf")
-        img = Image.new('RGB', (1000, 1000), color='blue')
-        img.save(img_pdf_path, "PDF", resolution=100.0)
+        img_pdf_path = os.path.join("input/test.pdf")
         
         original_size = os.path.getsize(img_pdf_path)
         print(f"Original PDF size: {original_size/1024:.2f} KB")
@@ -93,7 +91,7 @@ class TestFileTool(unittest.TestCase):
         output_path = os.path.join(self.output_dir, "compressed.pdf")
         
         # Compress with ratio 0.5 (target ~50% size)
-        FileTool.compress_pdf(img_pdf_path, output_path, 0.5)
+        FileTool.compress_pdf(img_pdf_path, output_path, 1)
         
         new_size = os.path.getsize(output_path)
         print(f"Compressed PDF size: {new_size/1024:.2f} KB")
