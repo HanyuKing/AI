@@ -91,7 +91,7 @@ class TestFileTool(unittest.TestCase):
         output_path = os.path.join(self.output_dir, "compressed.pdf")
         
         # Compress with ratio 0.5 (target ~50% size)
-        FileTool.compress_pdf(img_pdf_path, output_path, 1)
+        FileTool.compress_pdf(img_pdf_path, output_path, 0.5)
         
         new_size = os.path.getsize(output_path)
         print(f"Compressed PDF size: {new_size/1024:.2f} KB")

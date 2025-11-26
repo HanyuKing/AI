@@ -1,7 +1,7 @@
 import os
+import io
 from typing import Optional
 import fitz  # PyMuPDF
-
 from PIL import Image
 
 class FileTool:
@@ -9,45 +9,127 @@ class FileTool:
     @staticmethod
     def compress_pdf(input_path: str, output_path: str, ratio: float) -> None:
         """
-        压缩PDF文件 (通过将页面转换为图片重组PDF)
+        压缩PDF文件 (通过缩小图片分辨率和JPEG压缩，保持矢量文字不变)
         
         Args:
             input_path: 输入PDF文件路径
             output_path: 输出PDF文件路径
             ratio: 期望的文件大小压缩比例 (0.0 < ratio <= 1.0)。
-                   此实现会将页面光栅化为图片，通过降低分辨率和JPEG压缩来减小体积。
+                   此实现会遍历PDF中的所有图片，将其长宽缩放到 sqrt(ratio)，
+                   并使用JPEG压缩。矢量文字和图形保持不变。
         """
         if not (0 < ratio <= 1.0):
             raise ValueError("Ratio must be between 0 and 1")
 
         doc = fitz.open(input_path)
-        out_doc = fitz.open()
         
-        # Scale factor for resolution
-        # Area ~ scale^2. To get target size ratio, scale ~ sqrt(ratio)
+        # 分辨率缩放因子
+        # 面积 ~ scale^2。为了达到目标大小比例，scale ~ sqrt(ratio)
         scale = ratio ** 0.5
         
-        # JPEG quality
+        # 图片的JPEG压缩质量
         jpg_quality = 75
+        
+        # 跟踪已处理的图片，以正确处理复用的XObjects
+        processed_xrefs = set()
         
         try:
             for page in doc:
-                # Render page to image
-                # matrix controls the resolution
-                mat = fitz.Matrix(scale, scale)
-                pix = page.get_pixmap(matrix=mat)
-                
-                # Create new page with original dimensions
-                new_page = out_doc.new_page(width=page.rect.width, height=page.rect.height)
-                
-                # Insert the rendered image into the new page
-                # stream=pix.tobytes("jpg") ensures we use JPEG compression
-                new_page.insert_image(page.rect, stream=pix.tobytes("jpg", jpg_quality=jpg_quality))
-                
-            out_doc.save(output_path, garbage=4, deflate=True)
+                # get_images 返回列表 (xref, smask, width, height, bpc, colorspace, ...)
+                for img in page.get_images():
+                    xref = img[0]
+                    if xref in processed_xrefs:
+                        continue
+                    processed_xrefs.add(xref)
+                    
+                    try:
+                        # 获取图片内容作为Pixmap
+                        # fitz.Pixmap(doc, xref) 提供原始图片数据（忽略smask）
+                        pix = fitz.Pixmap(doc, xref)
+                        
+                        # 跳过小图片（图标等）或mask（bpc=1通常是mask/stencil）
+                        # 注意：有些扫描文档bpc=1。我们只关注通常较大且为RGB/Gray的“照片”。
+                        if pix.width < 100 or pix.height < 100:
+                            continue
+                            
+                        # 验证每组件位数。如果<8，可能不是我们想要压缩的照片（例如1位文本掩码）。
+                        # Pixmap.n 是每像素组件数。
+                        
+                        # 计算新尺寸
+                        new_w = int(pix.width * scale)
+                        new_h = int(pix.height * scale)
+                        
+                        if new_w < 1 or new_h < 1:
+                            continue
+                            
+                        # 转换为PIL Image以进行高质量缩放
+                        # pix.tobytes("png") 自动处理颜色转换为RGB/Gray（如果需要）
+                        img_data = pix.tobytes("png")
+                        
+                        with Image.open(io.BytesIO(img_data)) as pil_img:
+                            # 缩放
+                            pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                            
+                            output_buffer = io.BytesIO()
+                            is_jpeg = False
+                            
+                            # 决定格式：
+                            # 如果原始可能是照片（RGB/Gray），使用JPEG。
+                            # 如果有透明度（从原始xref不太可能有，除非显式存储）或者是调色板，保持PNG？
+                            # 注意：fitz.Pixmap(doc, xref) 通常没有alpha，除非这样存储。
+                            
+                            # 策略：
+                            # 1. 如果是CMYK/RGB -> 转为RGB -> JPEG
+                            # 2. 如果是Gray -> JPEG
+                            # 3. 如果是RGBA（在原始xref中很少见）-> PNG
+                            
+                            if pil_img.mode in ('RGBA', 'LA'):
+                                pil_img.save(output_buffer, format="PNG", optimize=True)
+                            else:
+                                # 如果不是Gray/RGB（例如CMYK, P），转为RGB
+                                if pil_img.mode != 'L' and pil_img.mode != 'RGB':
+                                    pil_img = pil_img.convert('RGB')
+                                
+                                pil_img.save(output_buffer, format="JPEG", quality=jpg_quality)
+                                is_jpeg = True
+                            
+                            new_data = output_buffer.getvalue()
+                        
+                        # 更新PDF对象流
+                        # compress=False 是关键：
+                        # 1. 对于JPEG，我们不希望Deflate（它已经被压缩了）。
+                        # 2. 如果我们Deflate一个JPEG但设置Filter=/DCTDecode，查看器会失败（期望原始JPEG）。
+                        doc.update_stream(xref, new_data, compress=False)
+                        
+                        # 更新属性
+                        doc.xref_set_key(xref, "Width", str(new_w))
+                        doc.xref_set_key(xref, "Height", str(new_h))
+                        
+                        if is_jpeg:
+                            doc.xref_set_key(xref, "Filter", "/DCTDecode")
+                            doc.xref_set_key(xref, "BitsPerComponent", "8") # JPEG总是8位
+                            
+                            # 关键：如果存在DecodeParms则移除，因为JPEG (DCTDecode) 不支持它。
+                            # 如果从之前的FlateDecode遗留下来，会损坏图片。
+                            doc.xref_set_key(xref, "DecodeParms", "null")
+                            
+                            if pil_img.mode == 'L':
+                                doc.xref_set_key(xref, "ColorSpace", "/DeviceGray")
+                            else:
+                                doc.xref_set_key(xref, "ColorSpace", "/DeviceRGB")
+                        else:
+                            doc.xref_set_key(xref, "Filter", "/FlateDecode")
+                            # 对于PNG，可能需要小心ColorSpace，
+                            # 但通常如果模式匹配，update_stream + Width/Height就足够了。
+                            
+                    except Exception as e:
+                        # 如果一张图片失败，记录日志并继续
+                        print(f"Warning: Failed to compress image xref {xref}: {e}")
+                        continue
+
+            doc.save(output_path, garbage=4, deflate=True)
         finally:
             doc.close()
-            out_doc.close()
 
     @staticmethod
     def compress_image_by_ratio(input_path: str, output_path: str, ratio: float) -> None:
