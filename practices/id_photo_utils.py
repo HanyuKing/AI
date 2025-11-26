@@ -121,6 +121,8 @@ class IdPhotoProcessor:
                                   use_post_process=True, 
                                   erode_size=erode_size,
                                   remove_stray_hairs=remove_stray_hairs)
+
+        fg.save("./output/rembg.png")
         
         # 2. 创建纯色背景
         bg = Image.new("RGB", fg.size, bg_color)
@@ -168,7 +170,7 @@ if __name__ == "__main__":
     # 简单的命令行测试
     import sys
     import os
-    img_name = "love.png"
+    img_name = "工卡照.jpeg"
     input_path = "images/" + img_name
 
     processor = IdPhotoProcessor(input_path)
