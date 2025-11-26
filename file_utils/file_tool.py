@@ -219,48 +219,125 @@ class FileTool:
     @staticmethod
     def convert_image_format(input_path: str, output_path: str, target_format: Optional[str] = None) -> None:
         """
-        转换图片格式
-
+        转换图片格式，支持 PDF 和图片之间的相互转换。
+        
         Args:
-            input_path: 输入图片路径
-            output_path: 输出图片路径
-            target_format: 目标格式 (例如 "PNG", "JPEG")。如果为None，则根据output_path后缀推断。
+            input_path: 输入文件路径 (图片或PDF)
+            output_path: 输出文件路径 (图片或PDF)
+            target_format: 目标格式 (例如 "PNG", "JPEG", "PDF")。如果为None，则根据output_path后缀推断。
         """
+        input_ext = os.path.splitext(input_path)[1].lower()
+        output_ext = os.path.splitext(output_path)[1].lower()
+        
+        # 确定目标格式
+        if target_format is None:
+            if output_ext == '.pdf':
+                target_format = 'PDF'
+            elif output_ext in ['.jpg', '.jpeg']:
+                target_format = 'JPEG'
+            elif output_ext == '.png':
+                target_format = 'PNG'
+            elif output_ext == '.webp':
+                target_format = 'WEBP'
+            elif output_ext == '.bmp':
+                target_format = 'BMP'
+            elif output_ext == '.gif':
+                target_format = 'GIF'
+            elif output_ext == '.tiff':
+                target_format = 'TIFF'
+        
+        if target_format:
+            target_format = target_format.upper()
+
+        # Case 1: PDF -> Image (Stitch all pages into one long image)
+        if input_ext == '.pdf' and target_format != 'PDF':
+            doc = fitz.open(input_path)
+            try:
+                if len(doc) > 0:
+                    images = []
+                    total_height = 0
+                    max_width = 0
+                    
+                    # 1. Render all pages to images
+                    for page in doc:
+                        pix = page.get_pixmap()
+                        
+                        # Handle Alpha for JPEG
+                        if target_format == 'JPEG' and pix.alpha:
+                             pix = fitz.Pixmap(fitz.csRGB, pix)
+                        
+                        img_data = pix.tobytes("png")
+                        img = Image.open(io.BytesIO(img_data))
+                        
+                        # Handle Alpha for formats that don't support it
+                        no_alpha_formats = ['JPEG', 'BMP', 'PCX', 'PPM']
+                        if (target_format in no_alpha_formats) and (img.mode in ['RGBA', 'LA', 'P']):
+                             if img.mode == 'P':
+                                img = img.convert('RGBA')
+                             if img.mode in ['RGBA', 'LA']:
+                                background = Image.new('RGB', img.size, (255, 255, 255))
+                                background.paste(img, mask=img.split()[-1])
+                                img = background
+                             else:
+                                img = img.convert('RGB')
+                        
+                        images.append(img)
+                        total_height += img.height
+                        max_width = max(max_width, img.width)
+                    
+                    # 2. Stitch images
+                    if not images:
+                        raise ValueError("No images extracted from PDF")
+                        
+                    # Create blank canvas
+                    # Use RGB for JPEG, RGBA for PNG (if supported/needed), but here we follow target_format logic roughly
+                    # Simpler to just use RGB if we converted segments to RGB, or RGBA if we kept them.
+                    # Since we normalized segments above, let's check the first image mode.
+                    mode = images[0].mode
+                    stitched_img = Image.new(mode, (max_width, total_height), (255, 255, 255) if mode == 'RGB' else (0, 0, 0, 0))
+                    
+                    y_offset = 0
+                    for img in images:
+                        # Center the image if it's narrower than max_width? Or left align?
+                        # Usually left align or center. Let's left align for simplicity, or center.
+                        # Let's left align to match document flow usually.
+                        stitched_img.paste(img, (0, y_offset))
+                        y_offset += img.height
+                    
+                    # 3. Save
+                    stitched_img.save(output_path, format=target_format)
+                    
+                else:
+                    raise ValueError("PDF file is empty")
+            finally:
+                doc.close()
+            return
+
+        # Case 2: Image -> PDF or Image -> Image
         with Image.open(input_path) as img:
-            # 确定目标格式
-            if target_format is None:
-                # 从后缀推断
-                ext = os.path.splitext(output_path)[1].lower()
-                if ext in ['.jpg', '.jpeg']:
-                    target_format = 'JPEG'
-                elif ext == '.png':
-                    target_format = 'PNG'
-                elif ext == '.webp':
-                    target_format = 'WEBP'
-                elif ext == '.bmp':
-                    target_format = 'BMP'
-                elif ext == '.gif':
-                    target_format = 'GIF'
-                elif ext == '.tiff':
-                    target_format = 'TIFF'
-            
-            if target_format:
-                target_format = target_format.upper()
-            
-            # 需要移除Alpha通道的格式列表
+            # Image -> PDF
+            if target_format == 'PDF':
+                # PDF不支持Alpha通道直接保存（通常），且需要RGB
+                if img.mode == 'RGBA':
+                    # 创建白色背景
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    background.paste(img, mask=img.split()[-1])
+                    img = background
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                img.save(output_path, "PDF", resolution=100.0)
+                return
+
+            # Image -> Image (Existing Logic)
             no_alpha_formats = ['JPEG', 'BMP', 'PCX', 'PPM']
             
-            # 如果目标格式不支持Alpha，或者强制转为RGB
             if (target_format in no_alpha_formats) and (img.mode in ['RGBA', 'LA', 'P']):
-                # 如果是P模式（调色板），先转RGBA
                 if img.mode == 'P':
                     img = img.convert('RGBA')
                 
                 if img.mode in ['RGBA', 'LA']:
-                    # 创建白色背景
                     background = Image.new('RGB', img.size, (255, 255, 255))
-                    # 使用alpha通道作为mask进行粘贴
-                    # split()[-1] 获取最后一个通道，即Alpha
                     background.paste(img, mask=img.split()[-1])
                     img = background
                 else:

@@ -72,13 +72,14 @@ class TestFileTool(unittest.TestCase):
     def test_convert_image_format(self):
         print("\n[Test] Image Format Conversion")
         img_path = self.create_dummy_image("original.png")
-        output_path = os.path.join(self.output_dir, "converted.webp")
+        # todo
+        output_path = os.path.join(self.output_dir, "converted.jpg")
         
-        FileTool.convert_image_format(img_path, output_path, "WEBP")
+        FileTool.convert_image_format("input/converted.png", output_path, "jpg")
         
         with Image.open(output_path) as img:
-            self.assertEqual(img.format, "WEBP")
-            print("PASS: Format converted to WEBP")
+            self.assertEqual(img.format, "jpg")
+            print("PASS: Format converted to JPG")
 
     def test_compress_pdf(self):
         print("\n[Test] PDF Compression (File Size)")
