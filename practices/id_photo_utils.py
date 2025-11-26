@@ -121,8 +121,6 @@ class IdPhotoProcessor:
                                   use_post_process=True, 
                                   erode_size=erode_size,
                                   remove_stray_hairs=remove_stray_hairs)
-
-        fg.save("./output/rembg.png")
         
         # 2. 创建纯色背景
         bg = Image.new("RGB", fg.size, bg_color)
