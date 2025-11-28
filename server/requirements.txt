@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-multipart
+jinja2
+qrcode
+pyyaml
+sqlparse
+pillow
+pymupdf
+numpy
+opencv-python-headless
+

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}图片转换 - MediaToolbox{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden mt-10">
+    <div class="px-6 py-8">
+        <div class="border-b border-gray-200 pb-4 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">图片格式转换</h2>
+            <p class="text-gray-600 mt-1">支持 PNG, JPG, WEBP, PDF, BMP 等格式互转。</p>
+        </div>
+
+        <form id="convertForm" class="space-y-6">
+            <!-- File Upload -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">选择图片或 PDF</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-primary transition-colors" id="dropZone">
+                    <div class="space-y-1 text-center">
+                         <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none">
+                                <span>上传文件</span>
+                                <input id="file-upload" name="file" type="file" class="sr-only" accept="image/*,.pdf">
+                            </label>
+                            <p class="pl-1">或拖拽文件</p>
+                        </div>
+                    </div>
+                </div>
+                <p id="fileName" class="mt-2 text-sm text-gray-500 hidden"></p>
+            </div>
+
+            <!-- Target Format -->
+            <div>
+                <label for="format" class="block text-sm font-medium text-gray-700">目标格式</label>
+                <select id="format" name="target_format" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md border">
+                    <option value="PNG">PNG</option>
+                    <option value="JPEG">JPEG / JPG</option>
+                    <option value="WEBP">WEBP</option>
+                    <option value="PDF">PDF</option>
+                    <option value="BMP">BMP</option>
+                    <option value="GIF">GIF</option>
+                    <option value="TIFF">TIFF</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end">
+                <button type="submit" id="submitBtn" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50">
+                    开始转换
+                </button>
+            </div>
+        </form>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden mt-6 text-center">
+            <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-indigo-500 transition ease-in-out duration-150 cursor-not-allowed">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                转换中...
+            </div>
+        </div>
+
+        <!-- Result -->
+        <div id="result" class="hidden mt-6 p-4 bg-green-50 rounded-md border border-green-200">
+             <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <svg class="h-6 w-6 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div>
+                        <h3 class="text-lg font-medium text-green-800">转换成功！</h3>
+                        <p class="text-sm text-green-600" id="successMsg"></p>
+                    </div>
+                </div>
+                <a id="downloadLink" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none">
+                    下载文件
+                </a>
+            </div>
+        </div>
+        
+         <!-- Error -->
+        <div id="error" class="hidden mt-6 p-4 bg-red-50 rounded-md border border-red-200 text-red-700"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const fileInput = document.getElementById('file-upload');
+    const fileName = document.getElementById('fileName');
+    const formatInput = document.getElementById('format');
+    const form = document.getElementById('convertForm');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const error = document.getElementById('error');
+    const downloadLink = document.getElementById('downloadLink');
+    const submitBtn = document.getElementById('submitBtn');
+
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            fileName.textContent = `已选择: ${this.files[0].name}`;
+            fileName.classList.remove('hidden');
+        }
+    });
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!fileInput.files[0]) {
+            alert("请先选择文件");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('target_format', formatInput.value);
+
+        loading.classList.remove('hidden');
+        result.classList.add('hidden');
+        error.classList.add('hidden');
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/media/image/convert', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'converted_image';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+                    if (filenameMatch && filenameMatch.length === 2)
+                        filename = filenameMatch[1];
+                }
+
+                downloadLink.href = url;
+                downloadLink.download = filename;
+                document.getElementById('successMsg').textContent = `文件名: ${filename}`;
+                
+                result.classList.remove('hidden');
+            } else {
+                const errData = await response.json();
+                error.textContent = `错误: ${errData.detail || 'Unknown error'}`;
+                error.classList.remove('hidden');
+            }
+        } catch (err) {
+            error.textContent = `网络错误: ${err.message}`;
+            error.classList.remove('hidden');
+        } finally {
+            loading.classList.add('hidden');
+            submitBtn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}
+

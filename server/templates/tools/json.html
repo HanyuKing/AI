@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}JSON 工具 - MediaToolbox{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto mt-6">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden flex flex-col h-[80vh]">
+        <!-- Toolbar -->
+        <div class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-xl font-bold text-gray-800 mr-4">JSON 工具</h2>
+            
+            <div class="flex space-x-2">
+                <button onclick="processJson('format')" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
+                    格式化 (Pretty)
+                </button>
+                <button onclick="processJson('minify')" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
+                    压缩 (Minify)
+                </button>
+                <button onclick="convertYaml()" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
+                    转 YAML
+                </button>
+                <button onclick="copyToClipboard()" class="px-3 py-1.5 bg-green-600 border border-transparent rounded shadow-sm text-sm font-medium text-white hover:bg-green-700">
+                    复制结果
+                </button>
+                <button onclick="clearAll()" class="px-3 py-1.5 bg-red-50 border border-red-200 rounded shadow-sm text-sm font-medium text-red-600 hover:bg-red-100">
+                    清空
+                </button>
+            </div>
+        </div>
+
+        <!-- Editor Area -->
+        <div class="flex-grow flex flex-col md:flex-row">
+            <!-- Input -->
+            <div class="w-full md:w-1/2 p-0 flex flex-col border-r border-gray-200">
+                <div class="bg-gray-50 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b">输入</div>
+                <textarea id="inputJson" class="flex-grow w-full p-4 font-mono text-sm focus:outline-none resize-none" placeholder="在此粘贴 JSON..."></textarea>
+            </div>
+            
+            <!-- Output -->
+            <div class="w-full md:w-1/2 p-0 flex flex-col bg-gray-50">
+                <div class="bg-gray-100 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b flex justify-between">
+                    <span>结果</span>
+                    <span id="statusMsg" class="text-green-600 hidden">处理成功</span>
+                </div>
+                <textarea id="outputJson" class="flex-grow w-full p-4 font-mono text-sm bg-gray-50 focus:outline-none resize-none text-gray-800" readonly placeholder="结果将显示在这里..."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const inputArea = document.getElementById('inputJson');
+    const outputArea = document.getElementById('outputJson');
+    const statusMsg = document.getElementById('statusMsg');
+
+    function showStatus(msg, isError = false) {
+        statusMsg.textContent = msg;
+        statusMsg.className = isError ? "text-red-600" : "text-green-600";
+        statusMsg.classList.remove('hidden');
+        setTimeout(() => statusMsg.classList.add('hidden'), 3000);
+    }
+
+    async function processJson(action) {
+        const content = inputArea.value.trim();
+        if (!content) return;
+
+        try {
+            let endpoint = '/api/dev/json/format';
+            let body = { content: content };
+
+            if (action === 'minify') {
+                body.indent = 0;
+            } else {
+                body.indent = 4;
+            }
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            const data = await response.json();
+            if (response.ok && data.success) {
+                outputArea.value = data.data;
+                showStatus("成功");
+            } else {
+                outputArea.value = data.detail || "Error";
+                showStatus("格式错误", true);
+            }
+        } catch (e) {
+            showStatus("网络错误", true);
+        }
+    }
+
+    async function convertYaml() {
+        const content = inputArea.value.trim();
+        if (!content) return;
+
+        try {
+            const response = await fetch('/api/dev/json/to-yaml', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: content })
+            });
+
+            const data = await response.json();
+            if (response.ok && data.success) {
+                outputArea.value = data.data;
+                showStatus("转换成功");
+            } else {
+                outputArea.value = data.detail || "Error";
+                showStatus("转换失败", true);
+            }
+        } catch (e) {
+            showStatus("网络错误", true);
+        }
+    }
+
+    function copyToClipboard() {
+        outputArea.select();
+        document.execCommand('copy');
+        showStatus("已复制到剪贴板");
+    }
+
+    function clearAll() {
+        inputArea.value = '';
+        outputArea.value = '';
+        inputArea.focus();
+    }
+</script>
+{% endblock %}
+
