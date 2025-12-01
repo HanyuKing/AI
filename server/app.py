@@ -59,7 +59,37 @@ async def tool_json(request: Request):
 async def tool_base64(request: Request):
     return templates.TemplateResponse("tools/base64.html", {"request": request})
 
-# Add more routes as I create the templates...
+@app.get("/tools/uuid", response_class=HTMLResponse)
+async def tool_uuid(request: Request):
+    return templates.TemplateResponse("tools/uuid.html", {"request": request})
+
+@app.get("/tools/timestamp", response_class=HTMLResponse)
+async def tool_timestamp(request: Request):
+    return templates.TemplateResponse("tools/timestamp.html", {"request": request})
+
+@app.get("/tools/qrcode", response_class=HTMLResponse)
+async def tool_qrcode(request: Request):
+    return templates.TemplateResponse("tools/qrcode.html", {"request": request})
+
+@app.get("/tools/image-edit", response_class=HTMLResponse)
+async def tool_image_edit(request: Request):
+    return templates.TemplateResponse("tools/image_edit.html", {"request": request})
+
+@app.get("/tools/base-convert", response_class=HTMLResponse)
+async def tool_base_convert(request: Request):
+    return templates.TemplateResponse("tools/base_convert.html", {"request": request})
+
+@app.get("/tools/url-encoder", response_class=HTMLResponse)
+async def tool_url_encoder(request: Request):
+    return templates.TemplateResponse("tools/url_encoder.html", {"request": request})
+
+@app.get("/tools/password", response_class=HTMLResponse)
+async def tool_password(request: Request):
+    return templates.TemplateResponse("tools/password.html", {"request": request})
+
+@app.get("/tools/diff", response_class=HTMLResponse)
+async def tool_diff(request: Request):
+    return templates.TemplateResponse("tools/diff.html", {"request": request})
 
 if __name__ == "__main__":
     import uvicorn

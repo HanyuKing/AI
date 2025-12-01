@@ -7,6 +7,9 @@ import io
 import yaml
 import sqlparse
 import qrcode
+import urllib.parse
+import string
+import secrets
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 
@@ -60,6 +63,13 @@ class LogicService:
                 return "Invalid Base64 String"
 
     @staticmethod
+    def url_process(text: str, action: str = "encode") -> str:
+        if action == "encode":
+            return urllib.parse.quote(text)
+        else:
+            return urllib.parse.unquote(text)
+
+    @staticmethod
     def convert_timestamp(ts: float = None) -> Dict[str, Any]:
         if ts is None:
             ts = time.time()
@@ -87,10 +97,10 @@ class LogicService:
             elif to_base == 16:
                 return hex(decimal_value)[2:]
             else:
-                # Simple implementation for other bases if needed, but usually 2,8,10,16 are enough
+                # Generic conversion could be added here, but standard bases cover 99% use cases
                 return str(decimal_value)
         except ValueError:
-            return "Invalid input for the given base"
+            return "Invalid input"
 
     @staticmethod
     def generate_uuid(count: int = 1, uppercase: bool = False, hyphens: bool = True) -> List[str]:
@@ -121,3 +131,24 @@ class LogicService:
         img.save(img_buffer, format="PNG")
         return img_buffer.getvalue()
 
+    @staticmethod
+    def generate_password(length: int = 16, 
+                          include_uppercase: bool = True, 
+                          include_lowercase: bool = True, 
+                          include_digits: bool = True, 
+                          include_symbols: bool = True) -> str:
+        alphabet = ""
+        if include_lowercase:
+            alphabet += string.ascii_lowercase
+        if include_uppercase:
+            alphabet += string.ascii_uppercase
+        if include_digits:
+            alphabet += string.digits
+        if include_symbols:
+            alphabet += "!@#$%^&*()_+-=[]{}|;:,.<>?"
+
+        if not alphabet:
+            return "Select at least one character set"
+
+        password = ''.join(secrets.choice(alphabet) for i in range(length))
+        return password

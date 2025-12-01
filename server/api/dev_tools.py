@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from server.schemas.requests import (
     JsonFormatRequest, SqlFormatRequest, HashRequest, 
-    Base64Request, UuidRequest
+    Base64Request, UuidRequest, UrlEncodeRequest, PasswordGenerateRequest,
+    BaseConvertRequest
 )
 from server.schemas.responses import BaseResponse
 from server.services.logic_service import LogicService
@@ -45,3 +46,23 @@ async def generate_uuid(request: UuidRequest):
     result = LogicService.generate_uuid(request.count, request.uppercase, request.hyphens)
     return BaseResponse(data=result)
 
+@router.post("/url", response_model=BaseResponse)
+async def url_process(request: UrlEncodeRequest):
+    result = LogicService.url_process(request.text, request.action)
+    return BaseResponse(data=result)
+
+@router.post("/password", response_model=BaseResponse)
+async def generate_password(request: PasswordGenerateRequest):
+    result = LogicService.generate_password(
+        request.length, 
+        request.include_uppercase, 
+        request.include_lowercase,
+        request.include_digits, 
+        request.include_symbols
+    )
+    return BaseResponse(data=result)
+
+@router.post("/base-convert", response_model=BaseResponse)
+async def base_convert(request: BaseConvertRequest):
+    result = LogicService.convert_base(request.value, request.from_base, request.to_base)
+    return BaseResponse(data=result)

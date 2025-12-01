@@ -18,6 +18,10 @@ class Base64Request(BaseModel):
     text: str
     action: str = "encode"  # encode, decode
 
+class UrlEncodeRequest(BaseModel):
+    text: str
+    action: str = "encode" # encode, decode
+
 # --- Time / Date Tools ---
 class TimestampRequest(BaseModel):
     timestamp: Optional[float] = None
@@ -40,3 +44,9 @@ class UuidRequest(BaseModel):
     uppercase: bool = False
     hyphens: bool = True
 
+class PasswordGenerateRequest(BaseModel):
+    length: int = 16
+    include_uppercase: bool = True
+    include_lowercase: bool = True
+    include_digits: bool = True
+    include_symbols: bool = True

@@ -90,6 +90,22 @@
             <a href="/tools/json" class="absolute inset-0 z-10"></a>
         </div>
 
+        <!-- URL Encoder -->
+        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-orange-100 rounded-md p-3">
+                        <span class="text-orange-600 font-bold text-lg">%20</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dt class="text-lg font-medium text-gray-900 truncate">URL 编解码</dt>
+                        <dd class="mt-1 text-sm text-gray-500">URL 参数编码与解码。</dd>
+                    </div>
+                </div>
+            </div>
+            <a href="/tools/url-encoder" class="absolute inset-0 z-10"></a>
+        </div>
+
         <!-- Base64 -->
         <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
             <div class="px-4 py-5 sm:p-6">
@@ -98,8 +114,8 @@
                         <span class="text-green-600 font-bold text-sm">64</span>
                     </div>
                     <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">Base64 编码/解码</dt>
-                        <dd class="mt-1 text-sm text-gray-500">文本或文件的 Base64 转换。</dd>
+                        <dt class="text-lg font-medium text-gray-900 truncate">Base64 转换</dt>
+                        <dd class="mt-1 text-sm text-gray-500">Base64 编码与解码。</dd>
                     </div>
                 </div>
             </div>
@@ -121,19 +137,71 @@
             </div>
             <a href="/tools/uuid" class="absolute inset-0 z-10"></a>
         </div>
+
+        <!-- Base Converter -->
+        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-teal-100 rounded-md p-3">
+                         <span class="text-teal-600 font-bold text-sm">0x</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dt class="text-lg font-medium text-gray-900 truncate">进制转换</dt>
+                        <dd class="mt-1 text-sm text-gray-500">二、八、十、十六进制互转。</dd>
+                    </div>
+                </div>
+            </div>
+            <a href="/tools/base-convert" class="absolute inset-0 z-10"></a>
+        </div>
+
+        <!-- Password Gen -->
+        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-indigo-100 rounded-md p-3">
+                         <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dt class="text-lg font-medium text-gray-900 truncate">密码生成器</dt>
+                        <dd class="mt-1 text-sm text-gray-500">生成安全的高强度随机密码。</dd>
+                    </div>
+                </div>
+            </div>
+            <a href="/tools/password" class="absolute inset-0 z-10"></a>
+        </div>
+
+        <!-- Text Diff -->
+        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-rose-100 rounded-md p-3">
+                         <svg class="h-6 w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dt class="text-lg font-medium text-gray-900 truncate">文本对比</dt>
+                        <dd class="mt-1 text-sm text-gray-500">快速对比两段文本的差异。</dd>
+                    </div>
+                </div>
+            </div>
+            <a href="/tools/diff" class="absolute inset-0 z-10"></a>
+        </div>
     </div>
 </div>
 
 <!-- Category: Utilities -->
 <div class="mb-12">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-indigo-500 pl-4">实用工具</h2>
+    <h2 class="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-pink-500 pl-4">实用工具</h2>
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <!-- Timestamp -->
         <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
             <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-indigo-100 rounded-md p-3">
-                        <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="flex-shrink-0 bg-pink-100 rounded-md p-3">
+                        <svg class="h-6 w-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
@@ -150,8 +218,8 @@
         <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
             <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-pink-100 rounded-md p-3">
-                         <svg class="h-6 w-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="flex-shrink-0 bg-gray-800 rounded-md p-3">
+                         <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                     </div>
@@ -166,4 +234,3 @@
     </div>
 </div>
 {% endblock %}
-
