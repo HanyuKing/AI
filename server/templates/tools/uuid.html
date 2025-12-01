@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}UUID 生成器 - MediaToolbox{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-6">UUID 生成器</h2>
+        
+        <div class="flex flex-wrap items-end gap-4 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">数量</label>
+                <input type="number" id="count" value="5" min="1" max="100" class="w-24 border border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary">
+            </div>
+            
+            <div class="flex items-center h-10">
+                <input type="checkbox" id="uppercase" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                <label for="uppercase" class="ml-2 block text-sm text-gray-900">大写</label>
+            </div>
+
+            <div class="flex items-center h-10">
+                <input type="checkbox" id="hyphens" checked class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                <label for="hyphens" class="ml-2 block text-sm text-gray-900">包含连字符 (-)</label>
+            </div>
+
+            <button onclick="generateUuid()" class="ml-auto px-6 py-2 bg-primary text-white rounded-md hover:bg-blue-600 shadow-sm">
+                生成
+            </button>
+        </div>
+
+        <div class="relative">
+            <textarea id="resultArea" class="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm bg-gray-50 resize-none" readonly></textarea>
+            <button onclick="copyResult()" class="absolute top-2 right-2 px-3 py-1 bg-white border border-gray-300 rounded text-xs hover:bg-gray-50">
+                复制
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function generateUuid() {
+        const count = document.getElementById('count').value;
+        const uppercase = document.getElementById('uppercase').checked;
+        const hyphens = document.getElementById('hyphens').checked;
+
+        try {
+            const response = await fetch('/api/dev/uuid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    count: parseInt(count), 
+                    uppercase: uppercase, 
+                    hyphens: hyphens 
+                })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('resultArea').value = data.data.join('\n');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function copyResult() {
+        const el = document.getElementById('resultArea');
+        el.select();
+        document.execCommand('copy');
+    }
+
+    // Generate on load
+    generateUuid();
+</script>
+{% endblock %}
+

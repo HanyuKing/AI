@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}图片编辑 - MediaToolbox{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto mt-10">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex" aria-label="Tabs">
+                <button onclick="switchTab('rotate')" id="tab-rotate" class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm text-primary border-primary">
+                    图片旋转
+                </button>
+                <button onclick="switchTab('resize')" id="tab-resize" class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300">
+                    图片缩放
+                </button>
+            </nav>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left: Controls -->
+            <div class="space-y-6">
+                
+                <!-- Common File Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">选择图片</label>
+                    <input type="file" id="fileInput" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                </div>
+
+                <!-- ROTATE CONTROLS -->
+                <div id="rotate-controls" class="block space-y-4">
+                    <h3 class="text-lg font-medium text-gray-900">旋转设置</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">角度 (度)</label>
+                        <div class="flex items-center mt-2 space-x-2">
+                            <button type="button" onclick="stepRotate(-90)" class="flex-1 px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 border border-gray-300 text-sm">
+                                <span class="inline-block transform -scale-x-100">⟳</span> 向左 90°
+                            </button>
+                            <button type="button" onclick="stepRotate(90)" class="flex-1 px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 border border-gray-300 text-sm">
+                                ⟳ 向右 90°
+                            </button>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-xs text-gray-500 mb-1">自定义角度</label>
+                            <input type="range" id="customAngle" min="-180" max="180" value="0" class="w-full" oninput="handleAngleInput(this.value)">
+                            <div class="text-right text-xs text-gray-500"><span id="angleDisplay">0</span>°</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESIZE CONTROLS -->
+                <div id="resize-controls" class="hidden space-y-4">
+                    <h3 class="text-lg font-medium text-gray-900">缩放设置</h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">宽度 (px)</label>
+                            <input type="number" id="resizeWidth" class="mt-1 shadow-sm focus:ring-primary focus:border-primary block w-full sm:text-sm border-gray-300 rounded-md border p-2" oninput="handleDimensionInput('width', this.value)">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">高度 (px)</label>
+                            <input type="number" id="resizeHeight" class="mt-1 shadow-sm focus:ring-primary focus:border-primary block w-full sm:text-sm border-gray-300 rounded-md border p-2" oninput="handleDimensionInput('height', this.value)">
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="lockAspect" checked class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                        <label for="lockAspect" class="ml-2 block text-sm text-gray-900">锁定长宽比</label>
+                    </div>
+
+                    <div>
+                         <label class="block text-sm font-medium text-gray-700">百分比</label>
+                         <div class="flex space-x-2 mt-1">
+                             <button onclick="setResizeRatio(0.25)" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">25%</button>
+                             <button onclick="setResizeRatio(0.5)" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">50%</button>
+                             <button onclick="setResizeRatio(0.75)" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">75%</button>
+                             <button onclick="setResizeRatio(1.0)" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">100%</button>
+                         </div>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="pt-4 border-t border-gray-200">
+                    <button id="downloadBtn" disabled onclick="downloadImage()" class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-400 cursor-not-allowed hover:bg-gray-500 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        下载图片
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Preview -->
+            <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 flex items-center justify-center min-h-[400px] relative">
+                <p id="previewPlaceholder" class="text-gray-400 text-sm">请选择图片进行预览</p>
+                <img id="previewImage" class="max-w-full max-h-[400px] object-contain hidden shadow-sm" />
+                <div id="imageInfo" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded hidden">
+                    0 x 0 px
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State
+    let originalImage = new Image();
+    let originalFileName = 'image.png';
+    
+    // Transformation State
+    let state = {
+        angle: 0,      // Degrees
+        scale: 1.0     // Relative to the rotated bounding box
+    };
+    
+    // Cached cachedRotatedDims to avoid jitter when scaling
+    let rotatedBaseDims = { w: 0, h: 0 };
+
+    // Elements
+    const fileInput = document.getElementById('fileInput');
+    const previewImg = document.getElementById('previewImage');
+    const placeholder = document.getElementById('previewPlaceholder');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const imageInfo = document.getElementById('imageInfo');
+    const customAngleInput = document.getElementById('customAngle');
+    const angleDisplay = document.getElementById('angleDisplay');
+    const widthInput = document.getElementById('resizeWidth');
+    const heightInput = document.getElementById('resizeHeight');
+    const lockAspect = document.getElementById('lockAspect');
+
+    // 1. Load Image
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            originalFileName = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                originalImage = new Image();
+                originalImage.onload = function() {
+                    // Reset State
+                    state.angle = 0;
+                    state.scale = 1.0;
+                    rotatedBaseDims = { w: originalImage.width, h: originalImage.height };
+                    
+                    // Reset UI
+                    customAngleInput.value = 0;
+                    angleDisplay.textContent = "0";
+                    
+                    // Render initial
+                    render();
+                    enableDownload();
+                };
+                originalImage.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // 2. Core Render Function (Non-destructive)
+    function render() {
+        if (!originalImage.src) return;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // A. Calculate Bounding Box for Rotation
+        const rads = state.angle * Math.PI / 180;
+        const c = Math.cos(rads);
+        const s = Math.sin(rads);
+        
+        const baseW = Math.abs(originalImage.width * c) + Math.abs(originalImage.height * s);
+        const baseH = Math.abs(originalImage.width * s) + Math.abs(originalImage.height * c);
+        
+        rotatedBaseDims = { w: baseW, h: baseH };
+        
+        // B. Apply Scale
+        const targetW = Math.round(baseW * state.scale);
+        const targetH = Math.round(baseH * state.scale);
+        
+        canvas.width = targetW;
+        canvas.height = targetH;
+        
+        // C. Draw
+        // Coordinate system: Center -> Rotate -> Scale -> Draw
+        
+        ctx.translate(targetW/2, targetH/2);
+        ctx.scale(state.scale, state.scale);
+        ctx.rotate(rads);
+        ctx.drawImage(originalImage, -originalImage.width/2, -originalImage.height/2);
+        
+        // D. Update Output
+        const dataUrl = canvas.toDataURL('image/png');
+        previewImg.src = dataUrl;
+        previewImg.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        imageInfo.classList.remove('hidden');
+        
+        // Update Info Text
+        imageInfo.textContent = `${targetW} x ${targetH} px`;
+        
+        // Sync Input Fields (only if they are not currently focused to avoid fighting user input? 
+        // Actually we should update them if the change came from Rotation or Ratio buttons)
+        if (document.activeElement !== widthInput) widthInput.value = targetW;
+        if (document.activeElement !== heightInput) heightInput.value = targetH;
+    }
+
+    // 3. Input Handlers
+    
+    // Rotation
+    function handleAngleInput(val) {
+        state.angle = parseInt(val);
+        angleDisplay.textContent = state.angle;
+        render();
+    }
+
+    function stepRotate(delta) {
+        let newVal = parseInt(customAngleInput.value) + delta;
+        if (newVal > 180) newVal -= 360;
+        if (newVal < -180) newVal += 360;
+        
+        customAngleInput.value = newVal;
+        handleAngleInput(newVal);
+    }
+
+    // Dimensions
+    function handleDimensionInput(type, val) {
+        if (!originalImage.src) return;
+        
+        const numVal = parseInt(val);
+        if (isNaN(numVal) || numVal <= 0) return;
+
+        // We need to update state.scale based on this new dimension
+        // Current Base Dims (after rotation, before scale) are in rotatedBaseDims
+        
+        if (type === 'width') {
+            state.scale = numVal / rotatedBaseDims.w;
+            if (lockAspect.checked) {
+                // Update height input immediately for better UX, though render() does it too
+                heightInput.value = Math.round(rotatedBaseDims.h * state.scale);
+            }
+        } else {
+            state.scale = numVal / rotatedBaseDims.h;
+            if (lockAspect.checked) {
+                widthInput.value = Math.round(rotatedBaseDims.w * state.scale);
+            }
+        }
+        
+        render();
+    }
+
+    function setResizeRatio(ratio) {
+        state.scale = ratio;
+        render();
+    }
+
+    // 4. Download
+    function enableDownload() {
+        downloadBtn.disabled = false;
+        downloadBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+        downloadBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+    }
+
+    function downloadImage() {
+        const link = document.createElement('a');
+        // Insert _edited before extension
+        const parts = originalFileName.split('.');
+        const ext = parts.length > 1 ? parts.pop() : 'png';
+        const name = parts.join('.');
+        link.download = `${name}_edited.png`; // Always png for simplicity
+        
+        link.href = previewImg.src;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Tab Switching
+    function switchTab(tab) {
+        const rotateSec = document.getElementById('rotate-controls');
+        const resizeSec = document.getElementById('resize-controls');
+        const rotateTab = document.getElementById('tab-rotate');
+        const resizeTab = document.getElementById('tab-resize');
+
+        if (tab === 'rotate') {
+            rotateSec.classList.remove('hidden');
+            resizeSec.classList.add('hidden');
+            rotateTab.classList.add('border-primary', 'text-primary');
+            rotateTab.classList.remove('border-transparent', 'text-gray-500');
+            resizeTab.classList.remove('border-primary', 'text-primary');
+            resizeTab.classList.add('border-transparent', 'text-gray-500');
+        } else {
+            rotateSec.classList.add('hidden');
+            resizeSec.classList.remove('hidden');
+            resizeTab.classList.add('border-secondary', 'text-secondary');
+            resizeTab.classList.remove('border-transparent', 'text-gray-500');
+            rotateTab.classList.remove('border-primary', 'text-primary');
+            rotateTab.classList.add('border-transparent', 'text-gray-500');
+        }
+    }
+</script>
+{% endblock %}
