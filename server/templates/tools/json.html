@@ -9,18 +9,21 @@
         <div class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
             <h2 class="text-xl font-bold text-gray-800 mr-4">JSON 工具</h2>
             
-            <div class="flex space-x-2">
-                <button onclick="processJson('format')" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
-                    格式化 (Pretty)
+            <div class="flex space-x-2 flex-wrap">
+                <button onclick="formatInput()" class="px-3 py-1.5 bg-blue-600 border border-transparent rounded shadow-sm text-sm font-medium text-white hover:bg-blue-700">
+                    格式化输入
                 </button>
-                <button onclick="processJson('minify')" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
-                    压缩 (Minify)
+                <button onclick="compressInput()" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
+                    压缩输入
                 </button>
-                <button onclick="convertYaml()" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
-                    转 YAML
+                <button onclick="expandAll()" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
+                    全部展开
                 </button>
-                <button onclick="copyToClipboard()" class="px-3 py-1.5 bg-green-600 border border-transparent rounded shadow-sm text-sm font-medium text-white hover:bg-green-700">
-                    复制结果
+                <button onclick="collapseAll()" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
+                    全部折叠
+                </button>
+                <button onclick="copyFormattedJson()" class="px-3 py-1.5 bg-green-600 border border-transparent rounded shadow-sm text-sm font-medium text-white hover:bg-green-700">
+                    复制JSON
                 </button>
                 <button onclick="clearAll()" class="px-3 py-1.5 bg-red-50 border border-red-200 rounded shadow-sm text-sm font-medium text-red-600 hover:bg-red-100">
                     清空
@@ -29,7 +32,7 @@
         </div>
 
         <!-- Editor Area -->
-        <div class="flex-grow flex flex-col md:flex-row">
+        <div class="flex-grow flex flex-col md:flex-row overflow-hidden">
             <!-- Input -->
             <div class="w-full md:w-1/2 p-0 flex flex-col border-r border-gray-200">
                 <div class="bg-gray-50 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b">输入</div>
@@ -37,23 +40,118 @@
             </div>
             
             <!-- Output -->
-            <div class="w-full md:w-1/2 p-0 flex flex-col bg-gray-50">
+            <div class="w-full md:w-1/2 p-0 flex flex-col bg-white">
                 <div class="bg-gray-100 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b flex justify-between">
-                    <span>结果</span>
+                    <span>树形视图</span>
                     <span id="statusMsg" class="text-green-600 hidden">处理成功</span>
                 </div>
-                <textarea id="outputJson" class="flex-grow w-full p-4 font-mono text-sm bg-gray-50 focus:outline-none resize-none text-gray-800" readonly placeholder="结果将显示在这里..."></textarea>
+                <div id="outputJson" class="flex-grow w-full p-4 overflow-auto text-sm bg-white" style="font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;"></div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.json-tree {
+    line-height: 1.6;
+    font-size: 14px;
+    color: #333;
+}
+
+.json-line {
+    padding: 2px 0;
+    position: relative;
+    transition: background-color 0.1s;
+    white-space: nowrap;
+}
+
+.json-line:hover {
+    background-color: #f5f5f5;
+}
+
+.json-toggle {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    color: #888;
+    margin-right: 2px;
+    font-size: 11px;
+    border-radius: 3px;
+    transition: all 0.15s;
+    vertical-align: middle;
+}
+
+.json-toggle:hover {
+    background-color: #e0e0e0;
+    color: #444;
+}
+
+.json-key {
+    color: #92278f;
+    font-weight: 500;
+}
+
+.json-string {
+    color: #c41a16;
+}
+
+.json-number {
+    color: #1c00cf;
+}
+
+.json-boolean {
+    color: #0d22ff;
+    font-weight: 600;
+}
+
+.json-null {
+    color: #999;
+    font-weight: 500;
+}
+
+.json-bracket {
+    color: #333;
+    font-weight: normal;
+}
+
+.json-collapsed {
+    display: none;
+}
+
+.json-comma {
+    color: #333;
+    margin-left: -1px;
+}
+
+.json-indent {
+    display: inline-block;
+}
+
+.json-summary {
+    color: #aaa;
+    font-style: normal;
+    margin-left: 8px;
+    font-size: 12px;
+}
+
+.json-colon {
+    margin: 0 6px 0 2px;
+    color: #333;
+}
+</style>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
     const inputArea = document.getElementById('inputJson');
-    const outputArea = document.getElementById('outputJson');
+    const outputDiv = document.getElementById('outputJson');
     const statusMsg = document.getElementById('statusMsg');
+    let parsedJson = null;
 
     function showStatus(msg, isError = false) {
         statusMsg.textContent = msg;
@@ -62,74 +160,296 @@
         setTimeout(() => statusMsg.classList.add('hidden'), 3000);
     }
 
-    async function processJson(action) {
+    // 实时更新结果
+    inputArea.addEventListener('input', function() {
+        updateTreeView();
+    });
+
+    // 支持Tab键缩进
+    inputArea.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            const value = this.value;
+            
+            // 插入Tab（使用4个空格）
+            this.value = value.substring(0, start) + '    ' + value.substring(end);
+            
+            // 恢复光标位置
+            this.selectionStart = this.selectionEnd = start + 4;
+            
+            // 触发更新
+            updateTreeView();
+        }
+    });
+
+    function updateTreeView() {
+        const content = inputArea.value.trim();
+        if (!content) {
+            outputDiv.innerHTML = '<div class="text-gray-400 italic">等待输入...</div>';
+            return;
+        }
+
+        try {
+            parsedJson = JSON.parse(content);
+            renderJsonTree();
+            showStatus("JSON 有效");
+        } catch (e) {
+            outputDiv.innerHTML = `<div class="text-red-600"><strong>JSON 解析错误：</strong><br>${escapeHtml(e.message)}</div>`;
+            parsedJson = null;
+        }
+    }
+
+    function renderJsonTree() {
+        if (!parsedJson) return;
+        
+        outputDiv.innerHTML = '<div class="json-tree">' + createJsonTree(parsedJson, 0, 'root') + '</div>';
+    }
+
+    function createJsonTree(obj, level, key, isLast = true) {
+        const indent = '&nbsp;'.repeat(level * 4);
+        let html = '';
+        
+        if (obj === null) {
+            return `<div class="json-line">${indent}<span class="json-null">null</span></div>`;
+        }
+
+        const type = Array.isArray(obj) ? 'array' : typeof obj;
+
+        if (type === 'object' || type === 'array') {
+            const isArray = type === 'array';
+            const entries = isArray ? obj : Object.entries(obj);
+            const length = isArray ? obj.length : Object.keys(obj).length;
+            const isEmpty = length === 0;
+            
+            const openBracket = isArray ? '[' : '{';
+            const closeBracket = isArray ? ']' : '}';
+            const summary = getSummary(obj);
+            
+            const toggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
+            
+            html += `<div class="json-line">`;
+            html += `${indent}`;
+            if (!isEmpty) {
+                html += `<span class="json-toggle" onclick="toggleCollapse('${toggleId}')">▼</span>`;
+            } else {
+                html += `<span style="display:inline-block;width:20px;"></span>`;
+            }
+            html += `<span class="json-bracket">${openBracket}</span>`;
+            html += `<span class="json-summary" id="${toggleId}-summary" style="display:none;">${summary}</span>`;
+            if (isEmpty) {
+                html += `<span class="json-bracket">${closeBracket}</span>`;
+                if (!isLast) html += `<span class="json-comma">,</span>`;
+            }
+            html += `</div>`;
+
+            if (!isEmpty) {
+                html += `<div id="${toggleId}">`;
+                
+                if (isArray) {
+                    obj.forEach((item, index) => {
+                        const isLastItem = index === obj.length - 1;
+                        if (typeof item === 'object' && item !== null) {
+                            html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
+                            html += `<span style="display:inline-block;width:20px;"></span>`;
+                            html += `<span class="json-key">[${index}]</span><span class="json-colon">:</span>`;
+                            const innerTree = createJsonTree(item, level + 1, index.toString(), isLastItem);
+                            // 提取内部树的第一行内容（去掉缩进和空格）
+                            const match = innerTree.match(/<span class="json-toggle"[\s\S]*$/);
+                            if (match) {
+                                html += match[0];
+                            }
+                        } else {
+                            html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
+                            html += `<span style="display:inline-block;width:20px;"></span>`;
+                            html += `<span class="json-key">[${index}]</span><span class="json-colon">:</span>${formatValue(item)}${isLastItem ? '' : '<span class="json-comma">,</span>'}</div>`;
+                        }
+                    });
+                } else {
+                    const keys = Object.keys(obj);
+                    keys.forEach((k, index) => {
+                        const isLastItem = index === keys.length - 1;
+                        const value = obj[k];
+                        
+                        if (typeof value === 'object' && value !== null) {
+                            html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
+                            html += `<span style="display:inline-block;width:20px;"></span>`;
+                            html += `<span class="json-key">"${escapeHtml(k)}"</span><span class="json-colon">:</span>`;
+                            const innerTree = createJsonTree(value, level + 1, k, isLastItem);
+                            const match = innerTree.match(/<span class="json-toggle"[\s\S]*$/);
+                            if (match) {
+                                html += match[0];
+                            }
+                        } else {
+                            html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
+                            html += `<span style="display:inline-block;width:20px;"></span>`;
+                            html += `<span class="json-key">"${escapeHtml(k)}"</span><span class="json-colon">:</span>${formatValue(value)}${isLastItem ? '' : '<span class="json-comma">,</span>'}</div>`;
+                        }
+                    });
+                }
+                
+                html += `</div>`;
+                html += `<div class="json-line">${indent}<span style="display:inline-block;width:20px;"></span><span class="json-bracket">${closeBracket}</span>${!isLast ? '<span class="json-comma">,</span>' : ''}</div>`;
+            }
+        } else {
+            html += `<div class="json-line">${indent}${formatValue(obj)}</div>`;
+        }
+
+        return html;
+    }
+
+    function formatValue(value) {
+        if (value === null) {
+            return '<span class="json-null">null</span>';
+        }
+        
+        const type = typeof value;
+        
+        if (type === 'string') {
+            return `<span class="json-string">"${escapeHtml(value)}"</span>`;
+        } else if (type === 'number') {
+            return `<span class="json-number">${value}</span>`;
+        } else if (type === 'boolean') {
+            return `<span class="json-boolean">${value}</span>`;
+        }
+        
+        return escapeHtml(String(value));
+    }
+
+    function getSummary(obj) {
+        if (Array.isArray(obj)) {
+            return `... ${obj.length} items`;
+        } else if (typeof obj === 'object') {
+            const keys = Object.keys(obj);
+            return `... ${keys.length} keys`;
+        }
+        return '';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function toggleCollapse(toggleId) {
+        const content = document.getElementById(toggleId);
+        const summary = document.getElementById(toggleId + '-summary');
+        const toggle = content.previousElementSibling.querySelector('.json-toggle');
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            summary.style.display = 'none';
+            toggle.textContent = '▼';
+        } else {
+            content.style.display = 'none';
+            summary.style.display = 'inline';
+            toggle.textContent = '▶';
+        }
+    }
+
+    function expandAll() {
+        document.querySelectorAll('.json-tree [id^="toggle-"]').forEach(el => {
+            if (!el.id.endsWith('-summary')) {
+                el.style.display = 'block';
+                const summary = document.getElementById(el.id + '-summary');
+                if (summary) summary.style.display = 'none';
+                const toggle = el.previousElementSibling?.querySelector('.json-toggle');
+                if (toggle) toggle.textContent = '▼';
+            }
+        });
+        showStatus("已全部展开");
+    }
+
+    function collapseAll() {
+        document.querySelectorAll('.json-tree [id^="toggle-"]').forEach(el => {
+            if (!el.id.endsWith('-summary')) {
+                el.style.display = 'none';
+                const summary = document.getElementById(el.id + '-summary');
+                if (summary) summary.style.display = 'inline';
+                const toggle = el.previousElementSibling?.querySelector('.json-toggle');
+                if (toggle) toggle.textContent = '▶';
+            }
+        });
+        showStatus("已全部折叠");
+    }
+
+    function formatInput() {
         const content = inputArea.value.trim();
         if (!content) return;
 
         try {
-            let endpoint = '/api/dev/json/format';
-            let body = { content: content };
-
-            if (action === 'minify') {
-                body.indent = 0;
-            } else {
-                body.indent = 4;
-            }
-
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-
-            const data = await response.json();
-            if (response.ok && data.success) {
-                outputArea.value = data.data;
-                showStatus("成功");
-            } else {
-                outputArea.value = data.detail || "Error";
-                showStatus("格式错误", true);
-            }
+            const obj = JSON.parse(content);
+            inputArea.value = JSON.stringify(obj, null, 2);
+            updateTreeView();
+            showStatus("输入已格式化");
         } catch (e) {
-            showStatus("网络错误", true);
+            showStatus("JSON 格式错误", true);
         }
     }
 
-    async function convertYaml() {
+    function compressInput() {
         const content = inputArea.value.trim();
         if (!content) return;
 
         try {
-            const response = await fetch('/api/dev/json/to-yaml', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: content })
-            });
-
-            const data = await response.json();
-            if (response.ok && data.success) {
-                outputArea.value = data.data;
-                showStatus("转换成功");
-            } else {
-                outputArea.value = data.detail || "Error";
-                showStatus("转换失败", true);
-            }
+            const obj = JSON.parse(content);
+            inputArea.value = JSON.stringify(obj);
+            updateTreeView();
+            showStatus("输入已压缩");
         } catch (e) {
-            showStatus("网络错误", true);
+            showStatus("JSON 格式错误", true);
         }
     }
 
-    function copyToClipboard() {
-        outputArea.select();
-        document.execCommand('copy');
-        showStatus("已复制到剪贴板");
+    function copyFormattedJson() {
+        if (!parsedJson) {
+            showStatus("没有有效的JSON可复制", true);
+            return;
+        }
+
+        const formatted = JSON.stringify(parsedJson, null, 2);
+        
+        // 使用现代的 Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(formatted).then(() => {
+                showStatus("已复制格式化的JSON到剪贴板");
+            }).catch(() => {
+                // 降级方案
+                fallbackCopy(formatted);
+            });
+        } else {
+            fallbackCopy(formatted);
+        }
+    }
+
+    function fallbackCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showStatus("已复制格式化的JSON到剪贴板");
+        } catch (e) {
+            showStatus("复制失败", true);
+        }
+        document.body.removeChild(textarea);
     }
 
     function clearAll() {
         inputArea.value = '';
-        outputArea.value = '';
+        outputDiv.innerHTML = '<div class="text-gray-400 italic">等待输入...</div>';
+        parsedJson = null;
         inputArea.focus();
     }
+
+    // 初始化
+    updateTreeView();
 </script>
 {% endblock %}
 
