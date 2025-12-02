@@ -26,5 +26,5 @@
   <path d="M12 10l3-1.5-3-1.5-3 1.5z" fill="url(#gradCyan)" stroke="none"/>
 
   <!-- 简单的发光效果（可选）：复制一个模糊的芯片在底层 -->
-  <path d="M12 10l3-1.5-3-1.5-3 1.5z" fill="#22D3EE" filter="blur(2px)" opacity="0.5"/>
+   <path d="M12 10l3-1.5-3-1.5-3 1.5z" fill="#22D3EE" filter="blur(2px)" opacity="0.5"/>
 </svg>
