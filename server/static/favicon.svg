@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="124" height="124">
+  <defs>
+    <!-- 定义渐变色 -->
+    <!-- 主体渐变：科技蓝 -->
+    <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+    <!-- 核心渐变：亮青色 -->
+    <linearGradient id="gradCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22D3EE;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06B6D4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 六边形外框：使用深色渐变填充，而非单色描边 -->
+  <!-- 这样更有实体感 -->
+  <path d="M12 2l8.5 5v10L12 22l-8.5-5V7L12 2z" stroke="url(#gradBlue)" stroke-width="2" fill="none" />
+
+  <!-- 内部 Y 形分割：同样的蓝色渐变 -->
+  <path d="M12 22v-8" stroke="url(#gradBlue)" stroke-width="2" />
+  <path d="M12 14l-8.5-5" stroke="url(#gradBlue)" stroke-width="2" />
+  <path d="M12 14l8.5-5" stroke="url(#gradBlue)" stroke-width="2" />
+
+  <!-- 中心菱形芯片：亮青色实心填充，作为视觉焦点 -->
+  <path d="M12 10l3-1.5-3-1.5-3 1.5z" fill="url(#gradCyan)" stroke="none"/>
+
+  <!-- 简单的发光效果（可选）：复制一个模糊的芯片在底层 -->
+   <path d="M12 10l3-1.5-3-1.5-3 1.5z" fill="#22D3EE" filter="blur(2px)" opacity="0.5"/>
+</svg>
