@@ -3,47 +3,50 @@
 {% block title %}JSON 工具 - MediaToolbox{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto mt-6">
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden flex flex-col h-[80vh]">
-        <!-- Toolbar -->
-        <div class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
-            <h2 class="text-xl font-bold text-gray-800 mr-4">JSON 工具</h2>
-            
-            <div class="flex space-x-2 flex-wrap">
-                <button onclick="formatInput()" class="px-3 py-1.5 bg-blue-600 border border-transparent rounded shadow-sm text-sm font-medium text-white hover:bg-blue-700">
-                    格式化输入
-                </button>
-                <button onclick="compressInput()" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
-                    压缩输入
-                </button>
-                <button onclick="expandAll()" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
-                    全部展开
-                </button>
-                <button onclick="collapseAll()" class="px-3 py-1.5 bg-white border border-gray-300 rounded shadow-sm text-sm font-medium hover:bg-gray-50 text-gray-700">
-                    全部折叠
-                </button>
-                <button onclick="copyFormattedJson()" class="px-3 py-1.5 bg-green-600 border border-transparent rounded shadow-sm text-sm font-medium text-white hover:bg-green-700">
-                    复制JSON
-                </button>
-                <button onclick="clearAll()" class="px-3 py-1.5 bg-red-50 border border-red-200 rounded shadow-sm text-sm font-medium text-red-600 hover:bg-red-100">
-                    清空
-                </button>
-            </div>
+<div class="max-w-7xl mx-auto mt-4">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden flex flex-col" style="height: calc(100vh - 140px);">
+        <!-- Header -->
+        <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">JSON 工具</h2>
         </div>
 
         <!-- Editor Area -->
         <div class="flex-grow flex flex-col md:flex-row overflow-hidden">
             <!-- Input -->
             <div class="w-full md:w-1/2 p-0 flex flex-col border-r border-gray-200">
-                <div class="bg-gray-50 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b">输入</div>
+                <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <span class="text-sm font-semibold text-gray-700">输入</span>
+                    <div class="flex space-x-2">
+                        <button onclick="formatInput()" class="px-3 py-1 bg-blue-600 border border-transparent rounded text-xs font-medium text-white hover:bg-blue-700 transition">
+                            格式化输入
+                        </button>
+                        <button onclick="compressInput()" class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
+                            压缩输入
+                        </button>
+                        <button onclick="clearAll()" class="px-3 py-1 bg-red-50 border border-red-200 rounded text-xs font-medium text-red-600 hover:bg-red-100 transition">
+                            清空
+                        </button>
+                    </div>
+                </div>
                 <textarea id="inputJson" class="flex-grow w-full p-4 font-mono text-sm focus:outline-none resize-none" placeholder="在此粘贴 JSON..."></textarea>
             </div>
             
             <!-- Output -->
             <div class="w-full md:w-1/2 p-0 flex flex-col bg-white">
-                <div class="bg-gray-100 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b flex justify-between">
-                    <span>树形视图</span>
-                    <span id="statusMsg" class="text-green-600 hidden">处理成功</span>
+                <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <span class="text-sm font-semibold text-gray-700">树形视图</span>
+                    <div class="flex space-x-2 items-center">
+                        <span id="statusMsg" class="text-green-600 text-xs hidden mr-2">处理成功</span>
+                        <button onclick="expandAll()" class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
+                            全部展开
+                        </button>
+                        <button onclick="collapseAll()" class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
+                            全部折叠
+                        </button>
+                        <button onclick="copyFormattedJson()" class="px-3 py-1 bg-green-600 border border-transparent rounded text-xs font-medium text-white hover:bg-green-700 transition">
+                            复制JSON
+                        </button>
+                    </div>
                 </div>
                 <div id="outputJson" class="flex-grow w-full p-4 overflow-auto text-sm bg-white" style="font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;"></div>
             </div>
@@ -253,8 +256,6 @@
                         const isLastItem = index === obj.length - 1;
                         if (typeof item === 'object' && item !== null) {
                             html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
-                            html += `<span style="display:inline-block;width:20px;"></span>`;
-                            html += `<span class="json-key">[${index}]</span><span class="json-colon">:</span>`;
                             const innerTree = createJsonTree(item, level + 1, index.toString(), isLastItem);
                             // 提取内部树的第一行内容（去掉缩进和空格）
                             const match = innerTree.match(/<span class="json-toggle"[\s\S]*$/);
@@ -264,7 +265,7 @@
                         } else {
                             html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
                             html += `<span style="display:inline-block;width:20px;"></span>`;
-                            html += `<span class="json-key">[${index}]</span><span class="json-colon">:</span>${formatValue(item)}${isLastItem ? '' : '<span class="json-comma">,</span>'}</div>`;
+                            html += `${formatValue(item)}${isLastItem ? '' : '<span class="json-comma">,</span>'}</div>`;
                         }
                     });
                 } else {
