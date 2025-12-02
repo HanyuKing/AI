@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}证件照裁剪 - MediaToolbox{% endblock %}
+
+{% block head %}
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    .size-option {
+        transition: all 0.2s ease;
+    }
+    
+    .size-option:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .size-option.active {
+        border-color: #3B82F6;
+        background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .cropper-container {
+        max-height: 500px;
+    }
+    
+    .preview-box {
+        width: 100%;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .color-btn {
+        transition: all 0.2s ease;
+    }
+    
+    .color-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .color-btn.active {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        transform: scale(1.15);
+    }
+    
+    .upload-area {
+        border: 2px dashed #cbd5e1;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover {
+        border-color: #3B82F6;
+        background: #f8fafc;
+    }
+    
+    .upload-area.drag-over {
+        border-color: #3B82F6;
+        background: #eff6ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto mt-6 mb-12 px-4">
+    <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 text-white">
+            <h2 class="text-2xl font-bold">证件照裁剪</h2>
+            <p class="text-blue-100 mt-1 text-sm">智能抠图·自由裁剪·一键换底</p>
+        </div>
+
+        <div class="p-6">
+            <!-- Step 1: Upload -->
+            <div class="mb-8">
+                <div class="flex items-center mb-4">
+                    <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold mr-3">1</span>
+                    <h3 class="text-lg font-semibold text-gray-800">上传照片</h3>
+                </div>
+                
+                <div id="uploadArea" class="upload-area rounded-xl p-8 text-center cursor-pointer">
+                    <input type="file" id="fileInput" accept="image/*" class="hidden"/>
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="text-gray-600 font-medium mb-1">点击选择图片或拖拽图片到这里</p>
+                    <p class="text-sm text-gray-500">支持 JPG、PNG、BMP、WEBP 格式</p>
+                </div>
+            </div>
+
+            <!-- Step 2 & 3: Edit and Preview -->
+            <div id="editSection" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Crop Area -->
+                    <div class="lg:col-span-2">
+                        <div class="flex items-center mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold mr-3">2</span>
+                            <h3 class="text-lg font-semibold text-gray-800">调整裁剪区域</h3>
+                        </div>
+                        
+                        <div class="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
+                            <img id="cropImage" class="max-w-full">
+                        </div>
+                        
+                        <!-- Crop Tools -->
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <button onclick="resetCrop()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                重置
+                            </button>
+                            <button onclick="rotateCrop(-90)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                                左转
+                            </button>
+                            <button onclick="rotateCrop(90)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"></path></svg>
+                                右转
+                            </button>
+                            <button onclick="flipHorizontal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                水平翻转
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Settings & Preview -->
+                    <div class="lg:col-span-1">
+                        <div class="flex items-center mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold mr-3">3</span>
+                            <h3 class="text-lg font-semibold text-gray-800">规格设置</h3>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <!-- Size Selection -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">证件照尺寸</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="selectSize('1inch')" data-size="1inch" class="size-option active p-3 bg-white border-2 border-gray-200 rounded-lg text-left hover:shadow-md">
+                                        <div class="text-sm font-semibold text-gray-800">一寸</div>
+                                        <div class="text-xs text-gray-500">25×35mm</div>
+                                    </button>
+                                    <button onclick="selectSize('small_1inch')" data-size="small_1inch" class="size-option p-3 bg-white border-2 border-gray-200 rounded-lg text-left hover:shadow-md">
+                                        <div class="text-sm font-semibold text-gray-800">小一寸</div>
+                                        <div class="text-xs text-gray-500">22×32mm</div>
+                                    </button>
+                                    <button onclick="selectSize('large_1inch')" data-size="large_1inch" class="size-option p-3 bg-white border-2 border-gray-200 rounded-lg text-left hover:shadow-md">
+                                        <div class="text-sm font-semibold text-gray-800">大一寸</div>
+                                        <div class="text-xs text-gray-500">33×48mm</div>
+                                    </button>
+                                    <button onclick="selectSize('2inch')" data-size="2inch" class="size-option p-3 bg-white border-2 border-gray-200 rounded-lg text-left hover:shadow-md">
+                                        <div class="text-sm font-semibold text-gray-800">二寸</div>
+                                        <div class="text-xs text-gray-500">35×49mm</div>
+                                    </button>
+                                    <button onclick="selectSize('small_2inch')" data-size="small_2inch" class="size-option p-3 bg-white border-2 border-gray-200 rounded-lg text-left hover:shadow-md">
+                                        <div class="text-sm font-semibold text-gray-800">小二寸</div>
+                                        <div class="text-xs text-gray-500">33×48mm</div>
+                                    </button>
+                                    <button onclick="selectSize('large_2inch')" data-size="large_2inch" class="size-option p-3 bg-white border-2 border-gray-200 rounded-lg text-left hover:shadow-md">
+                                        <div class="text-sm font-semibold text-gray-800">大二寸</div>
+                                        <div class="text-xs text-gray-500">35×53mm</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Background Color -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">背景颜色</label>
+                                <div class="flex flex-wrap gap-3 mb-3">
+                                    <button onclick="selectBgColor('#FFFFFF', this)" data-color="#FFFFFF" class="color-btn active w-12 h-12 rounded-full border-2 border-gray-300 bg-white shadow" title="白色"></button>
+                                    <button onclick="selectBgColor('#438EDB', this)" data-color="#438EDB" class="color-btn w-12 h-12 rounded-full border-2 border-gray-300 shadow" style="background-color: #438EDB;" title="标准蓝"></button>
+                                    <button onclick="selectBgColor('#D9001B', this)" data-color="#D9001B" class="color-btn w-12 h-12 rounded-full border-2 border-gray-300 shadow" style="background-color: #D9001B;" title="标准红"></button>
+                                    <button onclick="selectBgColor('#607D8B', this)" data-color="#607D8B" class="color-btn w-12 h-12 rounded-full border-2 border-gray-300 shadow" style="background-color: #607D8B;" title="灰色"></button>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <input type="color" id="bgColorPicker" value="#FFFFFF" class="h-10 w-16 border-2 border-gray-300 rounded cursor-pointer" onchange="updateCustomColor(this.value)">
+                                    <input type="text" id="bgColorInput" value="#FFFFFF" placeholder="#FFFFFF" class="flex-1 px-3 py-2 border-2 border-gray-300 rounded focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition text-sm" onchange="updateCustomColor(this.value)">
+                                </div>
+                            </div>
+
+                            <!-- Beautify -->
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" id="beautifyCheck" checked class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <span class="ml-3 text-sm font-medium text-gray-800">启用智能美颜</span>
+                                </label>
+                                <p class="text-xs text-gray-600 mt-2 ml-8">自动磨皮、美白，让照片更完美</p>
+                            </div>
+
+                            <!-- Preview -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">实时预览</label>
+                                <div class="preview-box bg-gray-100 border-2 border-gray-200">
+                                    <div id="previewContainer" style="width: 100%; height: 300px; overflow: hidden;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Generate Button -->
+                            <button id="generateBtn" onclick="generateIdPhoto()" class="w-full flex justify-center items-center px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg text-base font-bold transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                                生成证件照
+                            </button>
+                            
+                            <div id="processingIndicator" class="hidden text-center">
+                                <div class="inline-flex items-center px-4 py-3 bg-blue-50 text-blue-700 rounded-lg">
+                                    <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span class="text-sm font-medium">正在处理，请稍候...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Result -->
+            <div id="resultSection" class="hidden mt-8">
+                <div class="flex items-center mb-4">
+                    <span class="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white font-bold mr-3">✓</span>
+                    <h3 class="text-lg font-semibold text-gray-800">生成结果</h3>
+                </div>
+                
+                <div class="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 border-2 border-green-200">
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                        <div class="flex-shrink-0">
+                            <img id="resultImage" class="max-w-xs rounded-lg shadow-lg border-4 border-white" />
+                        </div>
+                        <div class="flex-1">
+                            <div class="bg-white rounded-lg p-4 shadow">
+                                <h4 class="font-semibold text-gray-800 mb-2">生成成功！</h4>
+                                <p id="resultInfo" class="text-sm text-gray-600 mb-4">证件照已生成，可以下载使用了</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button id="downloadBtn" onclick="downloadResult()" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow transition-all transform hover:scale-105 active:scale-95">
+                                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                        下载图片
+                                    </button>
+                                    <button onclick="resetAll()" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition">
+                                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                        重新制作
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cropper.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+<script>
+    // State
+    let selectedFile = null;
+    let cropper = null;
+    let resultBlob = null;
+    let selectedSize = '1inch';
+    let selectedBgColor = '#FFFFFF';
+    let scaleX = 1;
+    let scaleY = 1;
+
+    // Size aspect ratios (width:height)
+    const sizeRatios = {
+        '1inch': 25 / 35,
+        'small_1inch': 22 / 32,
+        'large_1inch': 33 / 48,
+        '2inch': 35 / 49,
+        'small_2inch': 33 / 48,
+        'large_2inch': 35 / 53
+    };
+
+    // Elements
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const editSection = document.getElementById('editSection');
+    const resultSection = document.getElementById('resultSection');
+    const cropImage = document.getElementById('cropImage');
+    const generateBtn = document.getElementById('generateBtn');
+    const processingIndicator = document.getElementById('processingIndicator');
+    const bgColorInput = document.getElementById('bgColorInput');
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    const beautifyCheck = document.getElementById('beautifyCheck');
+    const previewContainer = document.getElementById('previewContainer');
+    const resultImage = document.getElementById('resultImage');
+    const resultInfo = document.getElementById('resultInfo');
+
+    // Upload area interactions
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('drag-over');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            handleFileSelect(this.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/bmp', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            alert('请上传 JPG、PNG、BMP 或 WEBP 格式的图片');
+            return;
+        }
+
+        selectedFile = file;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            cropImage.src = e.target.result;
+            initCropper();
+            editSection.classList.remove('hidden');
+            resultSection.classList.add('hidden');
+            
+            // Smooth scroll to edit section
+            setTimeout(() => {
+                editSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        };
+        
+        reader.readAsDataURL(file);
+    }
+
+    function initCropper() {
+        if (cropper) {
+            cropper.destroy();
+        }
+        
+        const aspectRatio = sizeRatios[selectedSize];
+        
+        cropper = new Cropper(cropImage, {
+            aspectRatio: aspectRatio,
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 0.8,
+            restore: false,
+            guides: true,
+            center: true,
+            highlight: false,
+            cropBoxMovable: true,
+            cropBoxResizable: true,
+            toggleDragModeOnDblclick: false,
+            crop: updatePreview
+        });
+
+        scaleX = 1;
+        scaleY = 1;
+    }
+
+    function updatePreview() {
+        if (!cropper) return;
+        
+        const canvas = cropper.getCroppedCanvas({
+            width: 300,
+            height: 300 / sizeRatios[selectedSize]
+        });
+        
+        if (canvas) {
+            previewContainer.innerHTML = '';
+            const preview = canvas.toDataURL('image/png');
+            const img = document.createElement('img');
+            img.src = preview;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain';
+            previewContainer.appendChild(img);
+        }
+    }
+
+    function selectSize(size) {
+        selectedSize = size;
+        
+        // Update UI
+        document.querySelectorAll('.size-option').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-size="${size}"]`).classList.add('active');
+        
+        // Update cropper aspect ratio
+        if (cropper) {
+            cropper.setAspectRatio(sizeRatios[size]);
+        }
+    }
+
+    function selectBgColor(color, element) {
+        selectedBgColor = color;
+        bgColorInput.value = color;
+        bgColorPicker.value = color;
+        
+        // Update UI
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        if (element) {
+            element.classList.add('active');
+        }
+    }
+
+    function updateCustomColor(color) {
+        selectedBgColor = color;
+        bgColorInput.value = color;
+        bgColorPicker.value = color;
+        
+        // Deselect preset colors
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+    }
+
+    function resetCrop() {
+        if (cropper) {
+            cropper.reset();
+        }
+    }
+
+    function rotateCrop(degree) {
+        if (cropper) {
+            cropper.rotate(degree);
+        }
+    }
+
+    function flipHorizontal() {
+        if (cropper) {
+            scaleX = -scaleX;
+            cropper.scaleX(scaleX);
+        }
+    }
+
+    function resetAll() {
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+        selectedFile = null;
+        resultBlob = null;
+        fileInput.value = '';
+        editSection.classList.add('hidden');
+        resultSection.classList.add('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function generateIdPhoto() {
+        if (!selectedFile || !cropper) {
+            alert('请先上传并裁剪照片');
+            return;
+        }
+
+        // Get cropped image
+        const canvas = cropper.getCroppedCanvas({
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high'
+        });
+
+        canvas.toBlob(async (blob) => {
+            // UI Loading State
+            generateBtn.disabled = true;
+            processingIndicator.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', blob, 'cropped_photo.png');
+            formData.append('size', selectedSize);
+            formData.append('bg_color', selectedBgColor);
+            formData.append('beautify', beautifyCheck.checked);
+
+            try {
+                const response = await fetch('/api/media/image/id-photo', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || '生成失败');
+                }
+
+                resultBlob = await response.blob();
+                const url = URL.createObjectURL(resultBlob);
+                
+                resultImage.src = url;
+                resultSection.classList.remove('hidden');
+                
+                // Smooth scroll to result
+                setTimeout(() => {
+                    resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+                
+                resultInfo.textContent = `尺寸：${selectedSize.replace('_', ' ')}，背景：${selectedBgColor}`;
+            } catch (error) {
+                alert('错误: ' + error.message);
+            } finally {
+                generateBtn.disabled = false;
+                processingIndicator.classList.add('hidden');
+            }
+        }, 'image/png');
+    }
+
+    function downloadResult() {
+        if (!resultBlob) return;
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(resultBlob);
+        link.download = `证件照_${selectedSize}_${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+{% endblock %}

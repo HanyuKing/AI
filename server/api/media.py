@@ -9,6 +9,7 @@ from server.core.config import settings
 from server.services.file_service import FileService
 from server.services.vision_service import VisionService
 from server.services.svg_service import SVGService
+from server.services.id_photo_service import IdPhotoService
 from server.core.connection_manager import manager
 
 router = APIRouter()
@@ -293,4 +294,54 @@ async def get_svg_info(file: UploadFile = File(...)):
         return info
     except Exception as e:
         cleanup_files(input_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==============================================
+# 证件照生成端点
+# ==============================================
+
+@router.post("/image/id-photo")
+async def generate_id_photo(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    size: str = Form("1inch"),
+    bg_color: str = Form("#FFFFFF"),
+    beautify: bool = Form(True)
+):
+    """
+    生成证件照
+    - 自动抠图
+    - 替换背景色
+    - 可选美颜
+    - 调整到标准尺寸
+    """
+    # 验证文件类型
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.webp']
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"不支持的文件格式: {file_ext}")
+    
+    input_path = await save_upload_file(file)
+    output_filename = f"id_photo_{size}_{file.filename}"
+    output_path = str(settings.TEMP_DIR / f"{uuid.uuid4()}_{output_filename}")
+    
+    try:
+        IdPhotoService.generate_id_photo(
+            input_path=input_path,
+            output_path=output_path,
+            size_name=size,
+            bg_color=bg_color,
+            use_beautify=beautify
+        )
+        
+        background_tasks.add_task(cleanup_files, input_path, output_path)
+        return FileResponse(
+            output_path, 
+            filename=output_filename,
+            media_type="image/png"
+        )
+    except Exception as e:
+        cleanup_files(input_path)
+        if os.path.exists(output_path):
+            cleanup_files(output_path)
         raise HTTPException(status_code=500, detail=str(e))

@@ -4,6 +4,18 @@ from PIL import Image
 from rembg import remove, new_session
 import io
 
+# 证件照标准尺寸（单位：毫米），DPI 300
+# 格式: (宽_mm, 高_mm)
+ID_PHOTO_SIZES = {
+    "1inch": (25, 35),           # 1寸
+    "small_1inch": (22, 32),     # 小1寸
+    "large_1inch": (33, 48),     # 大1寸
+    "2inch": (35, 49),           # 2寸
+    "small_2inch": (33, 48),     # 小2寸（与大1寸相同）
+    "large_2inch": (35, 53),     # 大2寸
+    "5inch": (89, 127),          # 5寸
+}
+
 class IdPhotoProcessor:
     def __init__(self, image_path: str = None, image_data: bytes = None):
         """
@@ -163,6 +175,95 @@ class IdPhotoProcessor:
         # 转回 PIL 格式 (BGR -> RGB)
         final_rgb = cv2.cvtColor(brightened_bgr, cv2.COLOR_BGR2RGB)
         return Image.fromarray(final_rgb)
+
+    def generate_id_photo(
+        self,
+        size_name: str = "1inch",
+        bg_color: tuple = (255, 255, 255),
+        use_beautify: bool = True,
+        dpi: int = 300
+    ) -> Image.Image:
+        """
+        生成标准证件照。
+        
+        Args:
+            size_name: 尺寸规格（如 "1inch", "2inch" 等）
+            bg_color: 背景颜色 (R, G, B)
+            use_beautify: 是否使用美颜功能
+            dpi: 输出图片的 DPI（默认 300）
+            
+        Returns:
+            PIL Image 对象
+        """
+        # 1. 可选：美颜处理
+        if use_beautify:
+            self.original_image = self.beautify(smooth_strength=8, brighten_strength=1.15)
+        
+        # 2. 抠图并换背景
+        result_img = self.add_background_color(
+            bg_color=bg_color,
+            use_alpha_matting=True,
+            erode_size=10,
+            remove_stray_hairs=False
+        )
+        
+        # 3. 调整到标准尺寸
+        if size_name not in ID_PHOTO_SIZES:
+            raise ValueError(f"不支持的尺寸: {size_name}，可选值: {list(ID_PHOTO_SIZES.keys())}")
+        
+        width_mm, height_mm = ID_PHOTO_SIZES[size_name]
+        
+        # 毫米转像素 (DPI = 300 时，1mm = 11.811 像素)
+        mm_to_px = dpi / 25.4
+        target_width_px = int(width_mm * mm_to_px)
+        target_height_px = int(height_mm * mm_to_px)
+        
+        # 4. 智能裁剪/缩放到目标尺寸
+        result_img = self._smart_crop_and_resize(result_img, target_width_px, target_height_px)
+        
+        # 5. 设置 DPI 元数据
+        result_img.info['dpi'] = (dpi, dpi)
+        
+        return result_img
+
+    def _smart_crop_and_resize(self, img: Image.Image, target_width: int, target_height: int) -> Image.Image:
+        """
+        智能裁剪和缩放图片到目标尺寸。
+        
+        策略：
+        1. 计算目标宽高比
+        2. 如果原图宽高比不匹配，先按比例缩放，然后居中裁剪
+        3. 最后精确缩放到目标尺寸
+        """
+        orig_width, orig_height = img.size
+        target_ratio = target_width / target_height
+        orig_ratio = orig_width / orig_height
+        
+        if abs(orig_ratio - target_ratio) < 0.01:
+            # 宽高比已经接近，直接缩放
+            return img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        
+        # 需要裁剪
+        if orig_ratio > target_ratio:
+            # 原图更宽，以高度为基准，裁剪宽度
+            new_height = orig_height
+            new_width = int(new_height * target_ratio)
+            left = (orig_width - new_width) // 2
+            top = 0
+            right = left + new_width
+            bottom = orig_height
+        else:
+            # 原图更高，以宽度为基准，裁剪高度（从上部裁剪，保留人脸）
+            new_width = orig_width
+            new_height = int(new_width / target_ratio)
+            left = 0
+            top = 0  # 从顶部开始，保留头部
+            right = orig_width
+            bottom = new_height
+        
+        # 裁剪并缩放
+        cropped = img.crop((left, top, right, bottom))
+        return cropped.resize((target_width, target_height), Image.Resampling.LANCZOS)
 
 if __name__ == "__main__":
     # 简单的命令行测试

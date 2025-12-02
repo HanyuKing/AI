@@ -101,6 +101,10 @@ async def tool_diff(request: Request):
 async def tool_svg_converter(request: Request):
     return templates.TemplateResponse("tools/svg_converter.html", {"request": request})
 
+@app.get("/tools/id-photo", response_class=HTMLResponse)
+async def tool_id_photo(request: Request):
+    return templates.TemplateResponse("tools/id_photo.html", {"request": request})
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server.app:app", host="0.0.0.0", port=8000, reload=True)
