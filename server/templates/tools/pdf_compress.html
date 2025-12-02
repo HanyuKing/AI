@@ -143,7 +143,7 @@
                 let filename = 'compressed.pdf';
                 if (contentDisposition) {
                     const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
-                    if (filenameMatch.length === 2)
+                    if (filenameMatch && filenameMatch.length === 2)
                         filename = filenameMatch[1];
                 }
 
