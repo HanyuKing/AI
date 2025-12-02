@@ -28,7 +28,10 @@
                         </button>
                     </div>
                 </div>
-                <textarea id="inputJson" class="flex-grow w-full p-4 font-mono text-sm focus:outline-none resize-none" placeholder="在此粘贴 JSON..."></textarea>
+                <div class="flex-grow flex overflow-hidden relative">
+                    <div id="inputLineNumbers" class="bg-gray-50 text-right text-gray-400 text-sm font-mono py-4 pr-3 pl-2 border-r border-gray-200 select-none overflow-hidden" style="min-width: 50px; line-height: 1.5; white-space: pre;">1</div>
+                    <textarea id="inputJson" class="flex-grow w-full py-4 pl-4 pr-4 font-mono text-sm focus:outline-none resize-none overflow-auto" placeholder="在此粘贴 JSON..." style="line-height: 1.5;"></textarea>
+                </div>
             </div>
             
             <!-- Output -->
@@ -48,7 +51,7 @@
                         </button>
                     </div>
                 </div>
-                <div id="outputJson" class="flex-grow w-full p-4 overflow-auto text-sm bg-white" style="font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;"></div>
+                <div id="outputJson" class="flex-grow w-full py-4 overflow-auto text-sm bg-white" style="font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;"></div>
             </div>
         </div>
     </div>
@@ -56,20 +59,41 @@
 
 <style>
 .json-tree {
-    line-height: 1.6;
+    line-height: 1.5;
     font-size: 14px;
     color: #333;
+    display: flex;
+    flex-direction: column;
 }
 
 .json-line {
-    padding: 2px 0;
+    padding: 0;
     position: relative;
     transition: background-color 0.1s;
     white-space: nowrap;
+    display: flex;
+    min-height: 21px;
 }
 
 .json-line:hover {
     background-color: #f5f5f5;
+}
+
+.json-line-number {
+    min-width: 50px;
+    text-align: right;
+    padding-right: 12px;
+    padding-left: 8px;
+    color: #999;
+    user-select: none;
+    background-color: #fafafa;
+    border-right: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.json-line-content {
+    padding-left: 8px;
+    flex-grow: 1;
 }
 
 .json-toggle {
@@ -152,9 +176,11 @@
 {% block scripts %}
 <script>
     const inputArea = document.getElementById('inputJson');
+    const inputLineNumbers = document.getElementById('inputLineNumbers');
     const outputDiv = document.getElementById('outputJson');
     const statusMsg = document.getElementById('statusMsg');
     let parsedJson = null;
+    let currentLineNumber = 0;
 
     function showStatus(msg, isError = false) {
         statusMsg.textContent = msg;
@@ -163,8 +189,25 @@
         setTimeout(() => statusMsg.classList.add('hidden'), 3000);
     }
 
+    // 更新输入区行号
+    function updateInputLineNumbers() {
+        const lines = inputArea.value.split('\n');
+        const lineCount = lines.length;
+        let lineNumbersHtml = '';
+        for (let i = 1; i <= lineCount; i++) {
+            lineNumbersHtml += i + '\n';
+        }
+        inputLineNumbers.textContent = lineNumbersHtml;
+    }
+
+    // 同步滚动
+    inputArea.addEventListener('scroll', function() {
+        inputLineNumbers.scrollTop = inputArea.scrollTop;
+    });
+
     // 实时更新结果
     inputArea.addEventListener('input', function() {
+        updateInputLineNumbers();
         updateTreeView();
     });
 
@@ -208,6 +251,7 @@
     function renderJsonTree() {
         if (!parsedJson) return;
         
+        currentLineNumber = 0;
         outputDiv.innerHTML = '<div class="json-tree">' + createJsonTree(parsedJson, 0, 'root') + '</div>';
     }
 
@@ -216,7 +260,8 @@
         let html = '';
         
         if (obj === null) {
-            return `<div class="json-line">${indent}<span class="json-null">null</span></div>`;
+            currentLineNumber++;
+            return `<div class="json-line"><span class="json-line-number">${currentLineNumber}</span><span class="json-line-content">${indent}<span class="json-null">null</span></span></div>`;
         }
 
         const type = Array.isArray(obj) ? 'array' : typeof obj;
@@ -233,7 +278,10 @@
             
             const toggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
             
+            currentLineNumber++;
             html += `<div class="json-line">`;
+            html += `<span class="json-line-number">${currentLineNumber}</span>`;
+            html += `<span class="json-line-content">`;
             html += `${indent}`;
             if (!isEmpty) {
                 html += `<span class="json-toggle" onclick="toggleCollapse('${toggleId}')">▼</span>`;
@@ -246,7 +294,7 @@
                 html += `<span class="json-bracket">${closeBracket}</span>`;
                 if (!isLast) html += `<span class="json-comma">,</span>`;
             }
-            html += `</div>`;
+            html += `</span></div>`;
 
             if (!isEmpty) {
                 html += `<div id="${toggleId}">`;
@@ -255,17 +303,16 @@
                     obj.forEach((item, index) => {
                         const isLastItem = index === obj.length - 1;
                         if (typeof item === 'object' && item !== null) {
-                            html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
                             const innerTree = createJsonTree(item, level + 1, index.toString(), isLastItem);
-                            // 提取内部树的第一行内容（去掉缩进和空格）
-                            const match = innerTree.match(/<span class="json-toggle"[\s\S]*$/);
-                            if (match) {
-                                html += match[0];
-                            }
+                            html += innerTree;
                         } else {
-                            html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
+                            currentLineNumber++;
+                            html += `<div class="json-line">`;
+                            html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                            html += `<span class="json-line-content">${'&nbsp;'.repeat((level + 1) * 4)}`;
                             html += `<span style="display:inline-block;width:20px;"></span>`;
-                            html += `${formatValue(item)}${isLastItem ? '' : '<span class="json-comma">,</span>'}</div>`;
+                            html += `${formatValue(item)}${isLastItem ? '' : '<span class="json-comma">,</span>'}`;
+                            html += `</span></div>`;
                         }
                     });
                 } else {
@@ -275,27 +322,70 @@
                         const value = obj[k];
                         
                         if (typeof value === 'object' && value !== null) {
-                            html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
-                            html += `<span style="display:inline-block;width:20px;"></span>`;
+                            // 对象或数组值，需要递归处理
+                            const isArrayValue = Array.isArray(value);
+                            const innerLength = isArrayValue ? value.length : Object.keys(value).length;
+                            const innerIsEmpty = innerLength === 0;
+                            const innerOpenBracket = isArrayValue ? '[' : '{';
+                            const innerCloseBracket = isArrayValue ? ']' : '}';
+                            const innerSummary = getSummary(value);
+                            const innerToggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
+                            
+                            currentLineNumber++;
+                            html += `<div class="json-line">`;
+                            html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                            html += `<span class="json-line-content">${'&nbsp;'.repeat((level + 1) * 4)}`;
+                            if (!innerIsEmpty) {
+                                html += `<span class="json-toggle" onclick="toggleCollapse('${innerToggleId}')">▼</span>`;
+                            } else {
+                                html += `<span style="display:inline-block;width:20px;"></span>`;
+                            }
                             html += `<span class="json-key">"${escapeHtml(k)}"</span><span class="json-colon">:</span>`;
-                            const innerTree = createJsonTree(value, level + 1, k, isLastItem);
-                            const match = innerTree.match(/<span class="json-toggle"[\s\S]*$/);
-                            if (match) {
-                                html += match[0];
+                            html += `<span class="json-bracket">${innerOpenBracket}</span>`;
+                            html += `<span class="json-summary" id="${innerToggleId}-summary" style="display:none;">${innerSummary}</span>`;
+                            if (innerIsEmpty) {
+                                html += `<span class="json-bracket">${innerCloseBracket}</span>`;
+                                if (!isLastItem) html += `<span class="json-comma">,</span>`;
+                            }
+                            html += `</span></div>`;
+                            
+                            if (!innerIsEmpty) {
+                                html += `<div id="${innerToggleId}">`;
+                                const innerContent = renderInnerContent(value, level + 2);
+                                html += innerContent;
+                                html += `</div>`;
+                                
+                                currentLineNumber++;
+                                html += `<div class="json-line">`;
+                                html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                                html += `<span class="json-line-content">${'&nbsp;'.repeat((level + 1) * 4)}<span style="display:inline-block;width:20px;"></span><span class="json-bracket">${innerCloseBracket}</span>${!isLastItem ? '<span class="json-comma">,</span>' : ''}`;
+                                html += `</span></div>`;
                             }
                         } else {
-                            html += `<div class="json-line">${'&nbsp;'.repeat((level + 1) * 4)}`;
+                            currentLineNumber++;
+                            html += `<div class="json-line">`;
+                            html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                            html += `<span class="json-line-content">${'&nbsp;'.repeat((level + 1) * 4)}`;
                             html += `<span style="display:inline-block;width:20px;"></span>`;
-                            html += `<span class="json-key">"${escapeHtml(k)}"</span><span class="json-colon">:</span>${formatValue(value)}${isLastItem ? '' : '<span class="json-comma">,</span>'}</div>`;
+                            html += `<span class="json-key">"${escapeHtml(k)}"</span><span class="json-colon">:</span>${formatValue(value)}${isLastItem ? '' : '<span class="json-comma">,</span>'}`;
+                            html += `</span></div>`;
                         }
                     });
                 }
                 
                 html += `</div>`;
-                html += `<div class="json-line">${indent}<span style="display:inline-block;width:20px;"></span><span class="json-bracket">${closeBracket}</span>${!isLast ? '<span class="json-comma">,</span>' : ''}</div>`;
+                currentLineNumber++;
+                html += `<div class="json-line">`;
+                html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                html += `<span class="json-line-content">${indent}<span style="display:inline-block;width:20px;"></span><span class="json-bracket">${closeBracket}</span>${!isLast ? '<span class="json-comma">,</span>' : ''}`;
+                html += `</span></div>`;
             }
         } else {
-            html += `<div class="json-line">${indent}${formatValue(obj)}</div>`;
+            currentLineNumber++;
+            html += `<div class="json-line">`;
+            html += `<span class="json-line-number">${currentLineNumber}</span>`;
+            html += `<span class="json-line-content">${indent}${formatValue(obj)}`;
+            html += `</span></div>`;
         }
 
         return html;
@@ -327,6 +417,84 @@
             return `... ${keys.length} keys`;
         }
         return '';
+    }
+
+    function renderInnerContent(obj, level) {
+        let html = '';
+        
+        if (Array.isArray(obj)) {
+            obj.forEach((item, index) => {
+                const isLastItem = index === obj.length - 1;
+                if (typeof item === 'object' && item !== null) {
+                    const innerTree = createJsonTree(item, level, index.toString(), isLastItem);
+                    html += innerTree;
+                } else {
+                    currentLineNumber++;
+                    html += `<div class="json-line">`;
+                    html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                    html += `<span class="json-line-content">${'&nbsp;'.repeat(level * 4)}`;
+                    html += `<span style="display:inline-block;width:20px;"></span>`;
+                    html += `${formatValue(item)}${isLastItem ? '' : '<span class="json-comma">,</span>'}`;
+                    html += `</span></div>`;
+                }
+            });
+        } else {
+            const keys = Object.keys(obj);
+            keys.forEach((k, index) => {
+                const isLastItem = index === keys.length - 1;
+                const value = obj[k];
+                
+                if (typeof value === 'object' && value !== null) {
+                    const isArrayValue = Array.isArray(value);
+                    const innerLength = isArrayValue ? value.length : Object.keys(value).length;
+                    const innerIsEmpty = innerLength === 0;
+                    const innerOpenBracket = isArrayValue ? '[' : '{';
+                    const innerCloseBracket = isArrayValue ? ']' : '}';
+                    const innerSummary = getSummary(value);
+                    const innerToggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
+                    
+                    currentLineNumber++;
+                    html += `<div class="json-line">`;
+                    html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                    html += `<span class="json-line-content">${'&nbsp;'.repeat(level * 4)}`;
+                    if (!innerIsEmpty) {
+                        html += `<span class="json-toggle" onclick="toggleCollapse('${innerToggleId}')">▼</span>`;
+                    } else {
+                        html += `<span style="display:inline-block;width:20px;"></span>`;
+                    }
+                    html += `<span class="json-key">"${escapeHtml(k)}"</span><span class="json-colon">:</span>`;
+                    html += `<span class="json-bracket">${innerOpenBracket}</span>`;
+                    html += `<span class="json-summary" id="${innerToggleId}-summary" style="display:none;">${innerSummary}</span>`;
+                    if (innerIsEmpty) {
+                        html += `<span class="json-bracket">${innerCloseBracket}</span>`;
+                        if (!isLastItem) html += `<span class="json-comma">,</span>`;
+                    }
+                    html += `</span></div>`;
+                    
+                    if (!innerIsEmpty) {
+                        html += `<div id="${innerToggleId}">`;
+                        html += renderInnerContent(value, level + 1);
+                        html += `</div>`;
+                        
+                        currentLineNumber++;
+                        html += `<div class="json-line">`;
+                        html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                        html += `<span class="json-line-content">${'&nbsp;'.repeat(level * 4)}<span style="display:inline-block;width:20px;"></span><span class="json-bracket">${innerCloseBracket}</span>${!isLastItem ? '<span class="json-comma">,</span>' : ''}`;
+                        html += `</span></div>`;
+                    }
+                } else {
+                    currentLineNumber++;
+                    html += `<div class="json-line">`;
+                    html += `<span class="json-line-number">${currentLineNumber}</span>`;
+                    html += `<span class="json-line-content">${'&nbsp;'.repeat(level * 4)}`;
+                    html += `<span style="display:inline-block;width:20px;"></span>`;
+                    html += `<span class="json-key">"${escapeHtml(k)}"</span><span class="json-colon">:</span>${formatValue(value)}${isLastItem ? '' : '<span class="json-comma">,</span>'}`;
+                    html += `</span></div>`;
+                }
+            });
+        }
+        
+        return html;
     }
 
     function escapeHtml(text) {
@@ -384,6 +552,7 @@
         try {
             const obj = JSON.parse(content);
             inputArea.value = JSON.stringify(obj, null, 2);
+            updateInputLineNumbers();
             updateTreeView();
             showStatus("输入已格式化");
         } catch (e) {
@@ -398,6 +567,7 @@
         try {
             const obj = JSON.parse(content);
             inputArea.value = JSON.stringify(obj);
+            updateInputLineNumbers();
             updateTreeView();
             showStatus("输入已压缩");
         } catch (e) {
@@ -444,12 +614,14 @@
 
     function clearAll() {
         inputArea.value = '';
+        updateInputLineNumbers();
         outputDiv.innerHTML = '<div class="text-gray-400 italic">等待输入...</div>';
         parsedJson = null;
         inputArea.focus();
     }
 
     // 初始化
+    updateInputLineNumbers();
     updateTreeView();
 </script>
 {% endblock %}
