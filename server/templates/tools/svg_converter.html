@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+
+{% block title %}SVG转换器 - MediaToolbox{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- 页面标题 -->
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">SVG转换器</h1>
+        <p class="text-xl text-gray-600">最必要的工具存在一起，只需单击几下即可转换文件。</p>
+    </div>
+
+    <!-- 转换功能卡片网格 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <!-- EPS转SVG -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-blue-500" 
+             onclick="selectConversion('eps-to-svg')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">EPS转SVG</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">将EPS文件转换为SVG格式</p>
+        </div>
+
+        <!-- JPG转SVG -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-orange-500" 
+             onclick="selectConversion('jpg-to-svg')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">JPG转SVG</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">JPG变成矢量图</p>
+        </div>
+
+        <!-- PDF转SVG -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-red-500" 
+             onclick="selectConversion('pdf-to-svg')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">PDF转SVG</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">将文件另存为一组单独的图像</p>
+        </div>
+
+        <!-- PNG转SVG -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-cyan-500" 
+             onclick="selectConversion('png-to-svg')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">PNG转SVG</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">PNG变成矢量图</p>
+        </div>
+
+        <!-- 优化SVG -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-green-500" 
+             onclick="selectConversion('optimize-svg')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">优化SVG</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">压缩文件而不降低质量</p>
+        </div>
+
+        <!-- SVG转EPS -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-blue-500" 
+             onclick="selectConversion('svg-to-eps')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">SVG转EPS</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">将你的文件转换EPS格式</p>
+        </div>
+
+        <!-- SVG转JPG -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-orange-500" 
+             onclick="selectConversion('svg-to-jpg')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">SVG转JPG</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">将文件光栅化为JPG格式</p>
+        </div>
+
+        <!-- SVG转PDF -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-red-500" 
+             onclick="selectConversion('svg-to-pdf')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">SVG转PDF</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">另存为单独的文件或合并</p>
+        </div>
+
+        <!-- SVG转PNG -->
+        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer border-2 border-transparent hover:border-cyan-500" 
+             onclick="selectConversion('svg-to-png')">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-8 h-8 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">SVG转PNG</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">将文件光栅化为PNG格式</p>
+        </div>
+    </div>
+
+    <!-- 转换表单 -->
+    <div id="conversionPanel" class="max-w-3xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden hidden">
+        <div class="px-6 py-8">
+            <div class="border-b border-gray-200 pb-4 mb-6">
+                <h2 id="conversionTitle" class="text-2xl font-bold text-gray-800"></h2>
+                <p id="conversionDesc" class="text-gray-600 mt-1"></p>
+            </div>
+
+            <form id="convertForm" class="space-y-6">
+                <!-- 文件上传 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">选择文件</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-primary transition-colors" id="dropZone">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none">
+                                    <span>上传文件</span>
+                                    <input id="file-upload" name="file" type="file" class="sr-only">
+                                </label>
+                                <p class="pl-1">或拖拽文件</p>
+                            </div>
+                        </div>
+                    </div>
+                    <p id="fileName" class="mt-2 text-sm text-gray-500 hidden"></p>
+                </div>
+
+                <!-- 额外选项 (根据转换类型动态显示) -->
+                <div id="extraOptions" class="space-y-4 hidden">
+                    <!-- 矢量化模式 (用于位图转SVG) -->
+                    <div id="traceModeOption" class="hidden">
+                        <label for="traceMode" class="block text-sm font-medium text-gray-700">矢量化模式</label>
+                        <select id="traceMode" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md border">
+                            <option value="default">默认</option>
+                            <option value="detailed">详细（更多细节）</option>
+                            <option value="simplified">简化（更少节点）</option>
+                        </select>
+                    </div>
+
+                    <!-- 尺寸选项 (用于SVG转位图) -->
+                    <div id="sizeOption" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">输出尺寸（可选）</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="width" class="block text-xs text-gray-600">宽度 (px)</label>
+                                <input type="number" id="width" placeholder="自动" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="height" class="block text-xs text-gray-600">高度 (px)</label>
+                                <input type="number" id="height" placeholder="自动" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 质量选项 (用于JPG) -->
+                    <div id="qualityOption" class="hidden">
+                        <label for="quality" class="block text-sm font-medium text-gray-700">JPG质量</label>
+                        <input type="range" id="quality" min="1" max="100" value="95" class="mt-2 w-full">
+                        <div class="flex justify-between text-xs text-gray-600">
+                            <span>低质量</span>
+                            <span id="qualityValue">95</span>
+                            <span>高质量</span>
+                        </div>
+                    </div>
+
+                    <!-- 优化选项 (用于SVG优化) -->
+                    <div id="optimizeOptions" class="hidden space-y-3">
+                        <div>
+                            <label for="precision" class="block text-sm font-medium text-gray-700">数值精度</label>
+                            <input type="number" id="precision" value="2" min="1" max="10" class="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                            <p class="text-xs text-gray-500 mt-1">小数点后保留位数 (1-10)</p>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="removeMetadata" checked class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                            <label for="removeMetadata" class="ml-2 block text-sm text-gray-700">移除元数据</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="removeComments" checked class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                            <label for="removeComments" class="ml-2 block text-sm text-gray-700">移除注释</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="flex justify-between">
+                    <button type="button" onclick="hideConversionPanel()" class="inline-flex items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                        返回
+                    </button>
+                    <button type="submit" id="submitBtn" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50">
+                        开始转换
+                    </button>
+                </div>
+            </form>
+
+            <!-- Loading -->
+            <div id="loading" class="hidden mt-6 text-center">
+                <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-indigo-500 transition ease-in-out duration-150 cursor-not-allowed">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    转换中...
+                </div>
+            </div>
+
+            <!-- Result -->
+            <div id="result" class="hidden mt-6 p-4 bg-green-50 rounded-md border border-green-200">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <svg class="h-6 w-6 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div>
+                            <h3 class="text-lg font-medium text-green-800">转换成功！</h3>
+                            <p class="text-sm text-green-600" id="successMsg"></p>
+                        </div>
+                    </div>
+                    <a id="downloadLink" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none">
+                        下载文件
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Error -->
+            <div id="error" class="hidden mt-6 p-4 bg-red-50 rounded-md border border-red-200 text-red-700"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentConversion = '';
+    const conversions = {
+        'eps-to-svg': {
+            title: 'EPS转SVG',
+            desc: '将EPS文件转换为SVG矢量格式',
+            accept: '.eps',
+            api: '/api/media/svg/to-svg',
+            options: []
+        },
+        'jpg-to-svg': {
+            title: 'JPG转SVG',
+            desc: '将JPG图片矢量化为SVG格式',
+            accept: '.jpg,.jpeg',
+            api: '/api/media/svg/to-svg',
+            options: ['traceMode']
+        },
+        'png-to-svg': {
+            title: 'PNG转SVG',
+            desc: '将PNG图片矢量化为SVG格式',
+            accept: '.png',
+            api: '/api/media/svg/to-svg',
+            options: ['traceMode']
+        },
+        'pdf-to-svg': {
+            title: 'PDF转SVG',
+            desc: '将PDF页面转换为SVG格式',
+            accept: '.pdf',
+            api: '/api/media/svg/to-svg',
+            options: []
+        },
+        'svg-to-eps': {
+            title: 'SVG转EPS',
+            desc: '将SVG转换为EPS格式',
+            accept: '.svg',
+            api: '/api/media/svg/from-svg',
+            targetFormat: 'EPS',
+            options: []
+        },
+        'svg-to-jpg': {
+            title: 'SVG转JPG',
+            desc: '将SVG光栅化为JPG格式',
+            accept: '.svg',
+            api: '/api/media/svg/from-svg',
+            targetFormat: 'JPG',
+            options: ['size', 'quality']
+        },
+        'svg-to-pdf': {
+            title: 'SVG转PDF',
+            desc: '将SVG转换为PDF格式',
+            accept: '.svg',
+            api: '/api/media/svg/from-svg',
+            targetFormat: 'PDF',
+            options: []
+        },
+        'svg-to-png': {
+            title: 'SVG转PNG',
+            desc: '将SVG光栅化为PNG格式',
+            accept: '.svg',
+            api: '/api/media/svg/from-svg',
+            targetFormat: 'PNG',
+            options: ['size']
+        },
+        'optimize-svg': {
+            title: '优化SVG',
+            desc: '压缩SVG文件大小，不降低质量',
+            accept: '.svg',
+            api: '/api/media/svg/optimize',
+            options: ['optimize']
+        }
+    };
+
+    const fileInput = document.getElementById('file-upload');
+    const fileName = document.getElementById('fileName');
+    const form = document.getElementById('convertForm');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const error = document.getElementById('error');
+    const downloadLink = document.getElementById('downloadLink');
+    const submitBtn = document.getElementById('submitBtn');
+    const qualitySlider = document.getElementById('quality');
+    const qualityValue = document.getElementById('qualityValue');
+
+    // 质量滑块
+    if (qualitySlider) {
+        qualitySlider.addEventListener('input', function() {
+            qualityValue.textContent = this.value;
+        });
+    }
+
+    function selectConversion(type) {
+        currentConversion = type;
+        const config = conversions[type];
+        
+        document.getElementById('conversionTitle').textContent = config.title;
+        document.getElementById('conversionDesc').textContent = config.desc;
+        fileInput.setAttribute('accept', config.accept);
+        
+        // 隐藏所有选项
+        document.querySelectorAll('#extraOptions > div').forEach(el => el.classList.add('hidden'));
+        
+        // 显示相关选项
+        if (config.options && config.options.length > 0) {
+            document.getElementById('extraOptions').classList.remove('hidden');
+            config.options.forEach(opt => {
+                if (opt === 'traceMode') {
+                    document.getElementById('traceModeOption').classList.remove('hidden');
+                } else if (opt === 'size') {
+                    document.getElementById('sizeOption').classList.remove('hidden');
+                } else if (opt === 'quality') {
+                    document.getElementById('qualityOption').classList.remove('hidden');
+                } else if (opt === 'optimize') {
+                    document.getElementById('optimizeOptions').classList.remove('hidden');
+                }
+            });
+        } else {
+            document.getElementById('extraOptions').classList.add('hidden');
+        }
+        
+        // 显示转换面板
+        document.getElementById('conversionPanel').classList.remove('hidden');
+        document.getElementById('conversionPanel').scrollIntoView({ behavior: 'smooth' });
+        
+        // 重置表单
+        form.reset();
+        fileName.classList.add('hidden');
+        result.classList.add('hidden');
+        error.classList.add('hidden');
+    }
+
+    function hideConversionPanel() {
+        document.getElementById('conversionPanel').classList.add('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            fileName.textContent = `已选择: ${this.files[0].name}`;
+            fileName.classList.remove('hidden');
+        }
+    });
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!fileInput.files[0]) {
+            alert("请先选择文件");
+            return;
+        }
+
+        const config = conversions[currentConversion];
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        // 添加特定参数
+        if (config.targetFormat) {
+            formData.append('target_format', config.targetFormat);
+        }
+
+        if (config.options.includes('traceMode')) {
+            formData.append('trace_mode', document.getElementById('traceMode').value);
+        }
+
+        if (config.options.includes('size')) {
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+            if (width) formData.append('width', width);
+            if (height) formData.append('height', height);
+        }
+
+        if (config.options.includes('quality')) {
+            formData.append('quality', document.getElementById('quality').value);
+        }
+
+        if (config.options.includes('optimize')) {
+            formData.append('precision', document.getElementById('precision').value);
+            formData.append('remove_metadata', document.getElementById('removeMetadata').checked);
+            formData.append('remove_comments', document.getElementById('removeComments').checked);
+        }
+
+        loading.classList.remove('hidden');
+        result.classList.add('hidden');
+        error.classList.add('hidden');
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch(config.api, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'converted_file';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+                    if (filenameMatch && filenameMatch.length === 2)
+                        filename = filenameMatch[1];
+                }
+
+                downloadLink.href = url;
+                downloadLink.download = filename;
+                
+                // 显示额外信息（如果有）
+                let successMsg = `文件名: ${filename}`;
+                if (currentConversion === 'optimize-svg') {
+                    const reduction = response.headers.get('X-Size-Reduction');
+                    if (reduction) {
+                        successMsg += ` | 压缩率: ${reduction}`;
+                    }
+                }
+                document.getElementById('successMsg').textContent = successMsg;
+                
+                result.classList.remove('hidden');
+            } else {
+                const errData = await response.json();
+                error.textContent = `错误: ${errData.detail || 'Unknown error'}`;
+                error.classList.remove('hidden');
+            }
+        } catch (err) {
+            error.textContent = `网络错误: ${err.message}`;
+            error.classList.remove('hidden');
+        } finally {
+            loading.classList.add('hidden');
+            submitBtn.disabled = false;
+        }
+    });
+
+    // 拖拽上传
+    const dropZone = document.getElementById('dropZone');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('border-primary', 'bg-blue-50');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('border-primary', 'bg-blue-50');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            fileName.textContent = `已选择: ${files[0].name}`;
+            fileName.classList.remove('hidden');
+        }
+    }, false);
+</script>
+{% endblock %}
+

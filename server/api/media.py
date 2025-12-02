@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from server.core.config import settings
 from server.services.file_service import FileService
 from server.services.vision_service import VisionService
+from server.services.svg_service import SVGService
 from server.core.connection_manager import manager
 
 router = APIRouter()
@@ -130,6 +131,166 @@ async def resize_image(
         
         background_tasks.add_task(cleanup_files, input_path, output_path)
         return FileResponse(output_path, filename=output_filename)
+    except Exception as e:
+        cleanup_files(input_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==============================================
+# SVG转换端点
+# ==============================================
+
+@router.post("/svg/to-svg")
+async def convert_to_svg(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    trace_mode: str = Form("default")
+):
+    """
+    多种格式转SVG
+    支持: EPS, JPG, PNG, PDF
+    """
+    input_path = await save_upload_file(file)
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    original_name = os.path.splitext(file.filename)[0]
+    output_filename = f"{original_name}.svg"
+    output_path = str(settings.TEMP_DIR / f"{uuid.uuid4()}_{output_filename}")
+    
+    try:
+        if file_ext == '.eps':
+            SVGService.eps_to_svg(input_path, output_path)
+        elif file_ext in ['.jpg', '.jpeg']:
+            SVGService.jpg_to_svg(input_path, output_path, trace_mode)
+        elif file_ext == '.png':
+            SVGService.png_to_svg(input_path, output_path, trace_mode)
+        elif file_ext == '.pdf':
+            page_num = 0  # 默认第一页
+            SVGService.pdf_to_svg(input_path, output_path, page_num)
+        else:
+            raise HTTPException(status_code=400, detail=f"不支持的文件格式: {file_ext}")
+        
+        background_tasks.add_task(cleanup_files, input_path, output_path)
+        return FileResponse(output_path, filename=output_filename, media_type="image/svg+xml")
+    except Exception as e:
+        cleanup_files(input_path)
+        if os.path.exists(output_path):
+            cleanup_files(output_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/svg/from-svg")
+async def convert_from_svg(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    target_format: str = Form("PNG"),
+    width: Optional[int] = Form(None),
+    height: Optional[int] = Form(None),
+    quality: int = Form(95)
+):
+    """
+    SVG转其他格式
+    支持: PNG, JPG, PDF, EPS
+    """
+    if not file.filename.lower().endswith('.svg'):
+        raise HTTPException(status_code=400, detail="文件必须是SVG格式")
+    
+    input_path = await save_upload_file(file)
+    target_format = target_format.upper()
+    
+    # 确定输出文件扩展名
+    ext_map = {
+        "PNG": ".png",
+        "JPG": ".jpg",
+        "JPEG": ".jpg",
+        "PDF": ".pdf",
+        "EPS": ".eps",
+        "PS": ".eps"
+    }
+    
+    output_ext = ext_map.get(target_format, ".png")
+    original_name = os.path.splitext(file.filename)[0]
+    output_filename = f"{original_name}{output_ext}"
+    output_path = str(settings.TEMP_DIR / f"{uuid.uuid4()}_{output_filename}")
+    
+    try:
+        if target_format == "PNG":
+            SVGService.svg_to_png(input_path, output_path, width, height)
+        elif target_format in ["JPG", "JPEG"]:
+            SVGService.svg_to_jpg(input_path, output_path, width, height, quality)
+        elif target_format == "PDF":
+            SVGService.svg_to_pdf(input_path, output_path)
+        elif target_format in ["EPS", "PS"]:
+            SVGService.svg_to_eps(input_path, output_path)
+        else:
+            raise HTTPException(status_code=400, detail=f"不支持的目标格式: {target_format}")
+        
+        background_tasks.add_task(cleanup_files, input_path, output_path)
+        return FileResponse(output_path, filename=output_filename)
+    except Exception as e:
+        cleanup_files(input_path)
+        if os.path.exists(output_path):
+            cleanup_files(output_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/svg/optimize")
+async def optimize_svg(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    precision: int = Form(2),
+    remove_metadata: bool = Form(True),
+    remove_comments: bool = Form(True)
+):
+    """
+    优化SVG文件
+    压缩文件大小，不降低质量
+    """
+    if not file.filename.lower().endswith('.svg'):
+        raise HTTPException(status_code=400, detail="文件必须是SVG格式")
+    
+    input_path = await save_upload_file(file)
+    output_filename = f"optimized_{file.filename}"
+    output_path = str(settings.TEMP_DIR / f"{uuid.uuid4()}_{output_filename}")
+    
+    try:
+        SVGService.optimize_svg(
+            input_path, 
+            output_path, 
+            precision=precision,
+            remove_metadata=remove_metadata,
+            remove_comments=remove_comments
+        )
+        
+        # 获取优化前后的文件大小
+        original_size = os.path.getsize(input_path)
+        optimized_size = os.path.getsize(output_path)
+        reduction = round((1 - optimized_size / original_size) * 100, 2)
+        
+        background_tasks.add_task(cleanup_files, input_path, output_path)
+        
+        response = FileResponse(output_path, filename=output_filename, media_type="image/svg+xml")
+        response.headers["X-Original-Size"] = str(original_size)
+        response.headers["X-Optimized-Size"] = str(optimized_size)
+        response.headers["X-Size-Reduction"] = f"{reduction}%"
+        
+        return response
+    except Exception as e:
+        cleanup_files(input_path)
+        if os.path.exists(output_path):
+            cleanup_files(output_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/svg/info")
+async def get_svg_info(file: UploadFile = File(...)):
+    """
+    获取SVG文件信息
+    """
+    if not file.filename.lower().endswith('.svg'):
+        raise HTTPException(status_code=400, detail="文件必须是SVG格式")
+    
+    input_path = await save_upload_file(file)
+    
+    try:
+        info = SVGService.get_svg_info(input_path)
+        cleanup_files(input_path)
+        return info
     except Exception as e:
         cleanup_files(input_path)
         raise HTTPException(status_code=500, detail=str(e))
