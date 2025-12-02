@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}意见反馈 - MediaToolbox{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">意见反馈</h1>
+        <p class="mt-2 text-gray-500">您的建议是我们前进的动力</p>
+    </div>
+
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200">
+        <div class="p-6 md:p-8">
+            <form id="feedbackForm" class="space-y-6">
+                <!-- Feedback Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">反馈类型</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="type" value="suggestion" checked class="peer sr-only">
+                            <div class="rounded-md border border-gray-200 p-3 text-center hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-blue-50 peer-checked:text-primary transition-all">
+                                <span class="block text-sm font-medium">💡 功能建议</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="type" value="bug" class="peer sr-only">
+                            <div class="rounded-md border border-gray-200 p-3 text-center hover:bg-gray-50 peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-600 transition-all">
+                                <span class="block text-sm font-medium">🐛 报告 Bug</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="type" value="praise" class="peer sr-only">
+                            <div class="rounded-md border border-gray-200 p-3 text-center hover:bg-gray-50 peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:text-green-600 transition-all">
+                                <span class="block text-sm font-medium">❤️ 好评/其他</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Content -->
+                <div>
+                    <label for="content" class="block text-sm font-medium text-gray-700 mb-2">反馈内容 <span class="text-red-500">*</span></label>
+                    <textarea id="content" name="content" rows="6" required class="shadow-sm focus:ring-primary focus:border-primary block w-full sm:text-sm border-gray-300 rounded-md p-3" placeholder="请详细描述您的建议或遇到的问题..."></textarea>
+                </div>
+
+                <!-- Contact -->
+                <div>
+                    <label for="contact" class="block text-sm font-medium text-gray-700 mb-2">联系方式 (选填)</label>
+                    <div class="relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <input type="text" name="contact" id="contact" class="focus:ring-primary focus:border-primary block w-full pl-10 sm:text-sm border-gray-300 rounded-md p-2" placeholder="邮箱或微信号，方便我们联系您">
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-2">
+                    <button type="submit" id="submitFeedback" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
+                        提交反馈
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Success/Error Messages -->
+            <div id="feedbackSuccess" class="hidden mt-6 p-4 bg-green-50 border border-green-100 text-green-700 rounded-md text-sm flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">
+                        提交成功！感谢您的反馈。
+                    </p>
+                </div>
+            </div>
+            <div id="feedbackError" class="hidden mt-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-md text-sm flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                提交失败，请稍后重试。
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitFeedback');
+    const successMsg = document.getElementById('feedbackSuccess');
+    const errorMsg = document.getElementById('feedbackError');
+    const form = this;
+    
+    // Get data
+    const formData = new FormData(form);
+    const data = {
+        type: formData.get('type'),
+        content: formData.get('content'),
+        contact: formData.get('contact')
+    };
+    
+    // UI Loading
+    submitBtn.disabled = true;
+    const originalBtnText = submitBtn.innerText;
+    submitBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 提交中...`;
+    successMsg.classList.add('hidden');
+    errorMsg.classList.add('hidden');
+
+    try {
+        const response = await fetch('/api/general/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            successMsg.classList.remove('hidden');
+            form.reset();
+            // Restore button after delay
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalBtnText;
+                successMsg.classList.add('hidden');
+            }, 3000);
+        } else {
+            throw new Error('Failed to submit');
+        }
+    } catch (err) {
+        errorMsg.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalBtnText;
+    }
+});
+</script>
+{% endblock %}
+
