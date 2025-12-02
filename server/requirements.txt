@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
 jinja2
 qrcode
@@ -9,4 +9,4 @@ pillow
 pymupdf
 numpy
 opencv-python-headless
-
+websockets

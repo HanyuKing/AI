@@ -2,7 +2,7 @@ import os
 import sys
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable, Awaitable
 
 # Add project root to sys.path to import existing utils
 current_dir = Path(__file__).resolve().parent
@@ -14,8 +14,13 @@ from file_utils.file_tool import FileTool
 
 class FileService:
     @staticmethod
-    def compress_pdf(input_path: str, output_path: str, ratio: float) -> None:
-        FileTool.compress_pdf(input_path, output_path, ratio)
+    async def compress_pdf(
+        input_path: str, 
+        output_path: str, 
+        ratio: float,
+        progress_callback: Optional[Callable[[int, str], Awaitable[None]]] = None
+    ) -> None:
+        await FileTool.compress_pdf(input_path, output_path, ratio, progress_callback)
 
     @staticmethod
     def convert_format(input_path: str, output_path: str, target_format: Optional[str] = None) -> None:
@@ -30,4 +35,3 @@ class FileService:
         else:
             # If no params, just copy
             shutil.copy2(input_path, output_path)
-

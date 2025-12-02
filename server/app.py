@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 
 from server.core.config import settings
 from server.core.exceptions import global_exception_handler
-from server.api import media, dev_tools, utils_tools, general
+from server.api import media, dev_tools, utils_tools, general, websocket
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -37,6 +37,7 @@ app.include_router(media.router, prefix="/api/media", tags=["Media"])
 app.include_router(dev_tools.router, prefix="/api/dev", tags=["Dev Tools"])
 app.include_router(utils_tools.router, prefix="/api/utils", tags=["Utilities"])
 app.include_router(general.router, prefix="/api/general", tags=["General"])
+app.include_router(websocket.router, tags=["WebSocket"])
 
 # --- Frontend Routes ---
 

@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from server.core.config import settings
 from server.services.file_service import FileService
 from server.services.vision_service import VisionService
+from server.core.connection_manager import manager
 
 router = APIRouter()
 
@@ -35,7 +36,8 @@ async def save_upload_file(upload_file: UploadFile) -> str:
 async def compress_pdf(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    ratio: float = Form(0.5)
+    ratio: float = Form(0.5),
+    task_id: str = Form(None)
 ):
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="File must be a PDF")
@@ -45,10 +47,12 @@ async def compress_pdf(
     output_path = str(settings.TEMP_DIR / f"{uuid.uuid4()}_{output_filename}")
     
     try:
-        # Use run_in_threadpool if needed for blocking IO, 
-        # but here we assume the service calls are fast enough or acceptable for now.
-        # For heavy loads, should be async or threadpooled.
-        FileService.compress_pdf(input_path, output_path, ratio)
+        # Callback for progress
+        async def progress_callback(percent, message):
+            if task_id:
+                await manager.update_progress(task_id, percent, message)
+
+        await FileService.compress_pdf(input_path, output_path, ratio, progress_callback)
         
         background_tasks.add_task(cleanup_files, input_path, output_path)
         return FileResponse(output_path, filename=output_filename)
@@ -56,6 +60,9 @@ async def compress_pdf(
         cleanup_files(input_path)
         if os.path.exists(output_path):
             cleanup_files(output_path)
+        # If error, notify WS
+        if task_id:
+             await manager.update_progress(task_id, -1, f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/image/convert")
@@ -126,4 +133,3 @@ async def resize_image(
     except Exception as e:
         cleanup_files(input_path)
         raise HTTPException(status_code=500, detail=str(e))
-
