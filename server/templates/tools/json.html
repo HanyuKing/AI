@@ -16,12 +16,18 @@
             <div class="w-full md:w-1/2 p-0 flex flex-col border-r border-gray-200">
                 <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
                     <span class="text-sm font-semibold text-gray-700">输入</span>
-                    <div class="flex space-x-2">
+                    <div class="flex space-x-2 flex-wrap">
                         <button onclick="formatInput()" class="px-3 py-1 bg-blue-600 border border-transparent rounded text-xs font-medium text-white hover:bg-blue-700 transition">
-                            格式化输入
+                            格式化
                         </button>
                         <button onclick="compressInput()" class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
-                            压缩输入
+                            压缩
+                        </button>
+                        <button onclick="escapeJson()" class="px-3 py-1 bg-purple-600 border border-transparent rounded text-xs font-medium text-white hover:bg-purple-700 transition">
+                            转译
+                        </button>
+                        <button onclick="unescapeJson()" class="px-3 py-1 bg-purple-100 border border-purple-300 rounded text-xs font-medium text-purple-700 hover:bg-purple-200 transition">
+                            去转译
                         </button>
                         <button onclick="clearAll()" class="px-3 py-1 bg-red-50 border border-red-200 rounded text-xs font-medium text-red-600 hover:bg-red-100 transition">
                             清空
@@ -572,6 +578,48 @@
             showStatus("输入已压缩");
         } catch (e) {
             showStatus("JSON 格式错误", true);
+        }
+    }
+
+    function escapeJson() {
+        const content = inputArea.value.trim();
+        if (!content) return;
+
+        try {
+            // 先验证是否是有效的JSON
+            JSON.parse(content);
+            // 将JSON内容转义为字符串
+            const escaped = JSON.stringify(content);
+            inputArea.value = escaped;
+            updateInputLineNumbers();
+            showStatus("已转译");
+            // 转译后的内容不是有效JSON，清空输出
+            outputDiv.innerHTML = '<div class="text-gray-400 italic">转译后的内容不是有效的JSON</div>';
+            parsedJson = null;
+        } catch (e) {
+            showStatus("JSON 格式错误", true);
+        }
+    }
+
+    function unescapeJson() {
+        const content = inputArea.value.trim();
+        if (!content) return;
+
+        try {
+            // 尝试解析转义的字符串
+            const unescaped = JSON.parse(content);
+            
+            // 检查解析后的是否为字符串
+            if (typeof unescaped === 'string') {
+                inputArea.value = unescaped;
+                updateInputLineNumbers();
+                updateTreeView();
+                showStatus("已去转译");
+            } else {
+                showStatus("内容不是转义的JSON字符串", true);
+            }
+        } catch (e) {
+            showStatus("去转译失败，内容格式不正确", true);
         }
     }
 
