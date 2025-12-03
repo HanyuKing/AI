@@ -22,14 +22,17 @@ class IdPhotoService:
             use_beautify: Whether to apply beautification
         """
         # Parse hex color to RGB tuple
-        bg_color = bg_color.lstrip('#')
-        if len(bg_color) == 6:
-            r = int(bg_color[0:2], 16)
-            g = int(bg_color[2:4], 16)
-            b = int(bg_color[4:6], 16)
-            bg_rgb = (r, g, b)
+        if bg_color.lower() == 'transparent':
+            bg_rgb = None  # Indicate transparent background
         else:
-            bg_rgb = (255, 255, 255) # Default white
+            bg_color = bg_color.lstrip('#')
+            if len(bg_color) == 6:
+                r = int(bg_color[0:2], 16)
+                g = int(bg_color[2:4], 16)
+                b = int(bg_color[4:6], 16)
+                bg_rgb = (r, g, b)
+            else:
+                bg_rgb = (255, 255, 255) # Default white
 
         processor = IdPhotoProcessor(image_path=input_path)
         

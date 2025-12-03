@@ -6,72 +6,23 @@
 <!-- Cropper.js CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 <style>
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     
-    .size-card {
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .size-card:hover {
-        border-color: #3b82f6;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    .size-card.active {
-        border-color: #3b82f6;
-        background-color: #eff6ff;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-    }
+    .size-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .size-card:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+    .size-card.active { border-color: #3b82f6; background-color: #eff6ff; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
     
-    .color-option {
-        transition: transform 0.2s;
-    }
-    .color-option:hover {
-        transform: scale(1.1);
-        z-index: 10;
-    }
-    .color-option.active {
-        transform: scale(1.15);
-        box-shadow: 0 0 0 2px white, 0 0 0 4px #3b82f6;
-        z-index: 20;
-    }
+    .color-option { transition: transform 0.2s; }
+    .color-option:hover { transform: scale(1.1); z-index: 10; }
+    .color-option.active { transform: scale(1.15); box-shadow: 0 0 0 2px white, 0 0 0 4px #3b82f6; z-index: 20; }
 
     .workspace-area {
         min-height: 600px;
-        background-image: 
-            linear-gradient(45deg, #f1f5f9 25%, transparent 25%), 
-            linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), 
-            linear-gradient(45deg, transparent 75%, #f1f5f9 75%), 
-            linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
+        background-image: linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
         background-size: 20px 20px;
-        background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-    }
-
-    /* Loader Animation */
-    .loader {
-        border: 3px solid #f3f3f3;
-        border-radius: 50%;
-        border-top: 3px solid #3b82f6;
-        width: 24px;
-        height: 24px;
-        -webkit-animation: spin 1s linear infinite; /* Safari */
-        animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
     }
 </style>
 {% endblock %}
@@ -160,13 +111,14 @@
                 <!-- Result State -->
                 <div id="resultState" class="hidden w-full h-full flex flex-col items-center justify-center p-8">
                     <div class="bg-white p-4 shadow-2xl rounded-xl border border-gray-200 relative">
-                        <img id="resultImage" class="max-h-[500px] object-contain rounded-sm shadow-inner border border-gray-100">
+                        <!-- Canvas for real-time rendering -->
+                        <canvas id="resultCanvas" class="max-h-[500px] object-contain rounded-sm shadow-inner border border-gray-100"></canvas>
                         <div class="absolute -bottom-8 left-0 right-0 text-center text-sm text-gray-500" id="resultMeta"></div>
                     </div>
-                    <!-- Print Preview Badge (Future Feature) -->
+                    
                     <div class="mt-8 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium flex items-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        生成成功！标准尺寸已通过检测
+                        AI处理完成，点击左侧颜色可实时换底
                     </div>
                 </div>
 
@@ -280,7 +232,7 @@
     const state = {
         file: null,
         cropper: null,
-        resultBlob: null,
+        transparentBlob: null, // Store the transparent PNG from backend
         config: {
             size: '1inch',
             bgColor: '#FFFFFF',
@@ -294,7 +246,7 @@
         'small_1inch': { w: 260, h: 378, ratio: 260/378 },
         'large_1inch': { w: 390, h: 567, ratio: 390/567 },
         '2inch': { w: 413, h: 579, ratio: 413/579 },
-        'small_2inch': { w: 390, h: 567, ratio: 390/567 }, // Same pixel size often used
+        'small_2inch': { w: 390, h: 567, ratio: 390/567 },
         'large_2inch': { w: 413, h: 626, ratio: 413/626 }
     };
 
@@ -305,14 +257,15 @@
         editState: document.getElementById('editState'),
         resultState: document.getElementById('resultState'),
         cropImage: document.getElementById('cropImage'),
-        resultImage: document.getElementById('resultImage'),
+        resultCanvas: document.getElementById('resultCanvas'),
         generateBtn: document.getElementById('generateBtn'),
         downloadBtn: document.getElementById('downloadBtn'),
         downloadLayoutBtn: document.getElementById('downloadLayoutBtn'),
         loadingOverlay: document.getElementById('loadingOverlay'),
         loadingText: document.getElementById('loadingText'),
         workspace: document.getElementById('workspaceContainer'),
-        beautifyCheck: document.getElementById('beautifyCheck')
+        beautifyCheck: document.getElementById('beautifyCheck'),
+        resultMeta: document.getElementById('resultMeta')
     };
 
     // --- Event Listeners ---
@@ -398,8 +351,10 @@
         document.querySelectorAll('.color-option').forEach(el => el.classList.remove('active'));
         if (btnElement) btnElement.classList.add('active');
         
-        // If we have a result, we should probably re-generate or warn (for now just update state)
-        // Optimally, we would do frontend composting here if we had the transparent cutout.
+        // If we have the transparent result, update the canvas immediately (Client Side)
+        if (state.transparentBlob) {
+            renderResultCanvas();
+        }
     }
 
     function updateCustomColor(color) {
@@ -408,6 +363,10 @@
         const preview = document.getElementById('customColorPreview');
         preview.style.background = color;
         preview.classList.add('active');
+
+        if (state.transparentBlob) {
+            renderResultCanvas();
+        }
     }
 
     // --- Actions ---
@@ -430,6 +389,7 @@
 
     function resetAll() {
         state.file = null;
+        state.transparentBlob = null;
         if (state.cropper) {
             state.cropper.destroy();
             state.cropper = null;
@@ -455,20 +415,19 @@
             // 1. Get Cropped Blob
             const blob = await new Promise(resolve => {
                 state.cropper.getCroppedCanvas({
-                    fillColor: '#fff',
+                    fillColor: '#fff', // This fill color doesn't matter much as we are sending to backend for matting
                     imageSmoothingQuality: 'high'
                 }).toBlob(resolve, 'image/png');
             });
 
-            // 2. Prepare Form Data
+            // 2. Prepare Form Data - Request Transparent Image
             const formData = new FormData();
             formData.append('file', blob, 'source.png');
             formData.append('size', state.config.size);
-            formData.append('bg_color', state.config.bgColor);
+            formData.append('bg_color', 'transparent'); // KEY CHANGE: Request transparent
             formData.append('beautify', state.config.beautify);
 
             // 3. API Call
-            // Update loading text halfway
             setTimeout(() => elements.loadingText.textContent = "正在调整尺寸和美颜...", 2000);
 
             const response = await fetch('/api/media/image/id-photo', {
@@ -481,11 +440,12 @@
                 throw new Error(err.detail || '生成失败');
             }
 
-            // 4. Handle Result
-            state.resultBlob = await response.blob();
-            const url = URL.createObjectURL(state.resultBlob);
+            // 4. Handle Result (Transparent PNG)
+            state.transparentBlob = await response.blob();
             
-            elements.resultImage.src = url;
+            // 5. Render with selected background (Client Side)
+            await renderResultCanvas();
+            
             elements.editState.classList.add('hidden');
             elements.resultState.classList.remove('hidden');
             elements.downloadBtn.disabled = false;
@@ -499,18 +459,44 @@
         }
     }
 
+    async function renderResultCanvas() {
+        if (!state.transparentBlob) return;
+
+        const size = SIZE_CONFIG[state.config.size];
+        const canvas = elements.resultCanvas;
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        canvas.width = size.w;
+        canvas.height = size.h;
+
+        // 1. Fill Background
+        ctx.fillStyle = state.config.bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 2. Draw Transparent Person
+        const img = await createImageBitmap(state.transparentBlob);
+        ctx.drawImage(img, 0, 0, size.w, size.h);
+
+        // Update Meta
+        elements.resultMeta.textContent = `规格: ${size.w}x${size.h}px | 背景: ${state.config.bgColor}`;
+    }
+
     function downloadResult() {
-        if (!state.resultBlob) return;
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(state.resultBlob);
-        link.download = `证件照_${state.config.size}_${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        if (!elements.resultCanvas) return;
+        
+        elements.resultCanvas.toBlob((blob) => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `证件照_${state.config.size}_${Date.now()}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, 'image/png');
     }
 
     async function downloadLayout() {
-        if (!state.resultBlob) return;
+        if (!state.transparentBlob) return;
 
         // Standard 6-inch photo paper: 102x152mm
         // @300 DPI: 1205 x 1795 px
@@ -524,33 +510,42 @@
         canvas.height = PAPER_H;
         const ctx = canvas.getContext('2d');
 
-        // Fill white background
+        // Fill white background for paper
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, PAPER_W, PAPER_H);
 
-        // Load current ID photo
-        const img = await createImageBitmap(state.resultBlob);
-        const imgW = img.width;
-        const imgH = img.height;
+        // Prepare the single photo with current background
+        const photoCanvas = document.createElement('canvas');
+        const size = SIZE_CONFIG[state.config.size];
+        photoCanvas.width = size.w;
+        photoCanvas.height = size.h;
+        const pCtx = photoCanvas.getContext('2d');
+        
+        pCtx.fillStyle = state.config.bgColor;
+        pCtx.fillRect(0, 0, size.w, size.h);
+        const personImg = await createImageBitmap(state.transparentBlob);
+        pCtx.drawImage(personImg, 0, 0, size.w, size.h);
+
+        // Use the composited photo for layout
+        const imgW = size.w;
+        const imgH = size.h;
 
         // Calculate Grid
-        // Try to fit as many as possible
         const cols = Math.floor((PAPER_W - MARGIN * 2 + GAP) / (imgW + GAP));
         const rows = Math.floor((PAPER_H - MARGIN * 2 + GAP) / (imgH + GAP));
 
-        // Calculate starting position to center the grid
         const gridW = cols * imgW + (cols - 1) * GAP;
         const gridH = rows * imgH + (rows - 1) * GAP;
         
         const startX = (PAPER_W - gridW) / 2;
         const startY = (PAPER_H - gridH) / 2;
 
-        // Draw
+        // Draw Grid
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 const x = startX + c * (imgW + GAP);
                 const y = startY + r * (imgH + GAP);
-                ctx.drawImage(img, x, y, imgW, imgH);
+                ctx.drawImage(photoCanvas, x, y);
                 
                 // Optional: Draw cutting lines (light gray)
                 ctx.strokeStyle = '#e5e7eb';

@@ -188,7 +188,7 @@ class IdPhotoProcessor:
         
         Args:
             size_name: 尺寸规格（如 "1inch", "2inch" 等）
-            bg_color: 背景颜色 (R, G, B)
+            bg_color: 背景颜色 (R, G, B)，如果是 None，则返回透明背景
             use_beautify: 是否使用美颜功能
             dpi: 输出图片的 DPI（默认 300）
             
@@ -200,12 +200,22 @@ class IdPhotoProcessor:
             self.original_image = self.beautify(smooth_strength=8, brighten_strength=1.15)
         
         # 2. 抠图并换背景
-        result_img = self.add_background_color(
-            bg_color=bg_color,
-            use_alpha_matting=True,
-            erode_size=10,
-            remove_stray_hairs=False
-        )
+        if bg_color is None:
+            # 仅移除背景，返回透明 PNG
+            result_img = self.remove_background(
+                use_alpha_matting=True,
+                use_post_process=True,
+                erode_size=10,
+                remove_stray_hairs=False
+            )
+        else:
+            # 移除背景并添加底色
+            result_img = self.add_background_color(
+                bg_color=bg_color,
+                use_alpha_matting=True,
+                erode_size=10,
+                remove_stray_hairs=False
+            )
         
         # 3. 调整到标准尺寸
         if size_name not in ID_PHOTO_SIZES:
