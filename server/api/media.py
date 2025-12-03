@@ -304,7 +304,9 @@ async def get_svg_info(file: UploadFile = File(...)):
 async def generate_id_photo(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    size: str = Form("1inch"),
+    size: str = Form(None),
+    custom_width_mm: Optional[int] = Form(None),
+    custom_height_mm: Optional[int] = Form(None),
     bg_color: str = Form("#FFFFFF"),
     beautify: bool = Form(True)
 ):
@@ -313,7 +315,12 @@ async def generate_id_photo(
     - 自动抠图
     - 替换背景色
     - 可选美颜
-    - 调整到标准尺寸
+    - 调整到标准尺寸或自定义尺寸
+    
+    参数：
+    - size: 预设规格（如 1inch, 2inch）
+    - custom_width_mm: 自定义宽度（毫米）
+    - custom_height_mm: 自定义高度（毫米）
     """
     # 验证文件类型
     allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.webp']
@@ -321,8 +328,17 @@ async def generate_id_photo(
     if file_ext not in allowed_extensions:
         raise HTTPException(status_code=400, detail=f"不支持的文件格式: {file_ext}")
     
+    # 验证尺寸参数
+    if not size and not (custom_width_mm and custom_height_mm):
+        raise HTTPException(status_code=400, detail="必须提供 size 或 custom_width_mm/custom_height_mm")
+    
     input_path = await save_upload_file(file)
-    output_filename = f"id_photo_{size}_{file.filename}"
+    
+    if custom_width_mm and custom_height_mm:
+        output_filename = f"id_photo_custom_{custom_width_mm}x{custom_height_mm}_{file.filename}"
+    else:
+        output_filename = f"id_photo_{size}_{file.filename}"
+    
     output_path = str(settings.TEMP_DIR / f"{uuid.uuid4()}_{output_filename}")
     
     try:
@@ -330,6 +346,8 @@ async def generate_id_photo(
             input_path=input_path,
             output_path=output_path,
             size_name=size,
+            custom_width_mm=custom_width_mm,
+            custom_height_mm=custom_height_mm,
             bg_color=bg_color,
             use_beautify=beautify
         )

@@ -2,13 +2,13 @@ import os
 from typing import Tuple, Optional, Dict, List
 
 # 规格数据可以立即导入（不依赖重量级库）
-from practices.id_photo_specs import ID_PHOTO_SPECS, BG_COLOR_PRESETS, get_spec_by_id, search_specs
+from server.utils.id_photo_specs import ID_PHOTO_SPECS, BG_COLOR_PRESETS, get_spec_by_id, search_specs
 
 # 向后兼容：导入 ID_PHOTO_SIZES
 # 延迟导入 IdPhotoProcessor 以避免启动时加载 rembg
 def _lazy_import_processor():
     """延迟导入 IdPhotoProcessor，仅在实际使用时加载"""
-    from practices.id_photo_utils import IdPhotoProcessor, ID_PHOTO_SIZES
+    from server.utils.id_photo import IdPhotoProcessor, ID_PHOTO_SIZES
     return IdPhotoProcessor, ID_PHOTO_SIZES
 
 # 创建一个缓存的导入
@@ -20,10 +20,12 @@ class IdPhotoService:
     def generate_id_photo(
         input_path: str,
         output_path: str,
-        size_name: str = "1inch",
+        size_name: str = None,
         bg_color: str = "#FFFFFF",
         use_beautify: bool = True,
-        spec_id: str = None  # 新API参数
+        spec_id: str = None,  # 新API参数
+        custom_width_mm: Optional[int] = None,  # 自定义宽度（毫米）
+        custom_height_mm: Optional[int] = None  # 自定义高度（毫米）
     ) -> None:
         """
         Generate ID photo from input image.
@@ -35,6 +37,8 @@ class IdPhotoService:
             bg_color: Hex color string (e.g. "#FFFFFF", "#438EDB", "transparent")
             use_beautify: Whether to apply beautification
             spec_id: [New] Spec ID (e.g. "driving_license", "passport", "civil_servant")
+            custom_width_mm: Custom width in millimeters (for custom sizes)
+            custom_height_mm: Custom height in millimeters (for custom sizes)
         """
         # 延迟导入 IdPhotoProcessor
         global _processor_class
@@ -47,8 +51,10 @@ class IdPhotoService:
         # 优先使用新的 spec_id，如果没有则使用旧的 size_name
         if spec_id:
             final_spec_id = spec_id
-        else:
+        elif size_name:
             final_spec_id = size_name
+        else:
+            final_spec_id = None
         
         # Parse hex color to RGB tuple
         if bg_color.lower() == 'transparent':
@@ -69,7 +75,9 @@ class IdPhotoService:
             result_img = processor.generate_id_photo(
                 spec_id=final_spec_id,
                 bg_color=bg_rgb,
-                use_beautify=use_beautify
+                use_beautify=use_beautify,
+                custom_width_mm=custom_width_mm,
+                custom_height_mm=custom_height_mm
             )
             
             # 自动选择保存格式
