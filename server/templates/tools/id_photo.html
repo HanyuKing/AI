@@ -18,6 +18,9 @@
     .color-option { transition: transform 0.2s; }
     .color-option:hover { transform: scale(1.1); z-index: 10; }
     .color-option.active { transform: scale(1.15); box-shadow: 0 0 0 2px white, 0 0 0 4px #3b82f6; z-index: 20; }
+    
+    .category-tab { transition: all 0.2s; cursor: pointer; }
+    .category-tab:hover { opacity: 0.8; }
 
     .workspace-area {
         min-height: 600px;
@@ -141,33 +144,44 @@
             <div class="p-6 flex-1 overflow-y-auto custom-scrollbar">
                 <!-- Section 1: Spec Selection -->
                 <div class="mb-8">
-                    <label class="block text-sm font-bold text-gray-800 mb-4 flex items-center justify-between">
+                    <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center justify-between">
                         <span>1. 选择规格</span>
-                        <span class="text-xs font-normal text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">常用标准</span>
                     </label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="selectSize('1inch')" data-size="1inch" class="size-card active text-left p-3 rounded-lg border-2 border-gray-100 bg-white">
-                            <div class="font-bold text-gray-800 text-sm">一寸</div>
-                            <div class="text-xs text-gray-500 mt-0.5">25 × 35 mm</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5">295 × 413 px</div>
+                    
+                    <!-- Search Box -->
+                    <div class="relative mb-3">
+                        <input type="text" id="specSearch" placeholder="搜索规格（如：驾照、公务员）" 
+                               class="w-full px-3 py-2 pl-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               oninput="searchSpecs(this.value)">
+                        <svg class="w-4 h-4 absolute left-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    
+                    <!-- Category Tabs -->
+                    <div class="flex gap-1 mb-3 overflow-x-auto custom-scrollbar pb-1" id="categoryTabs">
+                        <button onclick="filterCategory('all')" data-category="all" class="category-tab active whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-blue-50 text-blue-600 font-medium">
+                            全部
                         </button>
-                        <button onclick="selectSize('2inch')" data-size="2inch" class="size-card text-left p-3 rounded-lg border-2 border-gray-100 bg-white">
-                            <div class="font-bold text-gray-800 text-sm">二寸</div>
-                            <div class="text-xs text-gray-500 mt-0.5">35 × 49 mm</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5">413 × 579 px</div>
+                        <button onclick="filterCategory('standard')" data-category="standard" class="category-tab whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                            📏 常用
                         </button>
-                        <button onclick="selectSize('small_2inch')" data-size="small_2inch" class="size-card text-left p-3 rounded-lg border-2 border-gray-100 bg-white">
-                            <div class="font-bold text-gray-800 text-sm">小二寸</div>
-                            <div class="text-xs text-gray-500 mt-0.5">33 × 48 mm</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5">390 × 567 px</div>
+                        <button onclick="filterCategory('driving')" data-category="driving" class="category-tab whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                            🚗 驾驶
                         </button>
-                        <button onclick="selectSize('large_1inch')" data-size="large_1inch" class="size-card text-left p-3 rounded-lg border-2 border-gray-100 bg-white">
-                            <div class="font-bold text-gray-800 text-sm">大一寸</div>
-                            <div class="text-xs text-gray-500 mt-0.5">33 × 48 mm</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5">390 × 567 px</div>
+                        <button onclick="filterCategory('exam')" data-category="exam" class="category-tab whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                            📝 考试
+                        </button>
+                        <button onclick="filterCategory('travel')" data-category="travel" class="category-tab whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                            ✈️ 出入境
+                        </button>
+                        <button onclick="filterCategory('more')" data-category="more" class="category-tab whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                            更多
                         </button>
                     </div>
-                    <!-- More sizes expandable (Future) -->
+                    
+                    <!-- Specs Grid -->
+                    <div class="grid grid-cols-2 gap-2 max-h-[380px] overflow-y-auto custom-scrollbar pr-1" id="specsContainer">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
                 </div>
 
                 <!-- Section 2: Background Color -->
@@ -241,14 +255,51 @@
     };
 
     // --- Constants ---
-    const SIZE_CONFIG = {
-        '1inch': { w: 295, h: 413, ratio: 295/413 },
-        'small_1inch': { w: 260, h: 378, ratio: 260/378 },
-        'large_1inch': { w: 390, h: 567, ratio: 390/567 },
-        '2inch': { w: 413, h: 579, ratio: 413/579 },
-        'small_2inch': { w: 390, h: 567, ratio: 390/567 },
-        'large_2inch': { w: 413, h: 626, ratio: 413/626 }
+    const SPECS_DATA = {
+        // 常用标准
+        '1inch': { name: '一寸', w: 25, h: 35, category: 'standard', keywords: '一寸 常用' },
+        '2inch': { name: '二寸', w: 35, h: 49, category: 'standard', keywords: '二寸 常用' },
+        'small_1inch': { name: '小一寸', w: 22, h: 32, category: 'standard', keywords: '小一寸' },
+        'large_1inch': { name: '大一寸', w: 33, h: 48, category: 'standard', keywords: '大一寸' },
+        'small_2inch': { name: '小二寸', w: 33, h: 48, category: 'standard', keywords: '小二寸' },
+        
+        // 驾驶证件
+        'driving_license': { name: '驾驶证', w: 22, h: 32, category: 'driving', keywords: '驾驶证 驾照 学车' },
+        'driver_qualification': { name: '从业资格证', w: 25, h: 35, category: 'driving', keywords: '从业资格 货运 客运' },
+        
+        // 考试报名
+        'civil_servant': { name: '公务员考试', w: 35, h: 45, category: 'exam', keywords: '公务员 国考 省考' },
+        'cet': { name: '英语四六级', w: 25, h: 35, category: 'exam', keywords: '四六级 英语 CET' },
+        'ncee': { name: '高考报名', w: 25, h: 35, category: 'exam', keywords: '高考' },
+        'postgraduate': { name: '研究生考试', w: 25, h: 35, category: 'exam', keywords: '考研 研究生' },
+        'teacher_qualification': { name: '教师资格证', w: 25, h: 35, category: 'exam', keywords: '教资 教师' },
+        'cpa': { name: '注册会计师', w: 25, h: 35, category: 'exam', keywords: 'CPA 注会 会计' },
+        'judicial_exam': { name: '法律职业资格', w: 25, h: 35, category: 'exam', keywords: '司考 法考 律师' },
+        
+        // 出入境证件
+        'passport': { name: '护照', w: 33, h: 48, category: 'travel', keywords: '护照 出国' },
+        'hk_macau_permit': { name: '港澳通行证', w: 33, h: 48, category: 'travel', keywords: '港澳 香港 澳门' },
+        'taiwan_permit': { name: '台湾通行证', w: 33, h: 48, category: 'travel', keywords: '台湾' },
+        'visa_us': { name: '美国签证', w: 51, h: 51, category: 'travel', keywords: '美国 签证 美签' },
+        'visa_schengen': { name: '申根签证', w: 35, h: 45, category: 'travel', keywords: '申根 欧洲 签证' },
+        
+        // 其他
+        'id_card': { name: '身份证', w: 26, h: 32, category: 'more', keywords: '身份证' },
+        'student_id': { name: '学生证', w: 25, h: 35, category: 'more', keywords: '学生证' },
+        'graduation': { name: '毕业照', w: 35, h: 49, category: 'more', keywords: '毕业 毕业照' },
+        'resume': { name: '简历照片', w: 25, h: 35, category: 'more', keywords: '简历 求职' },
+        'social_security': { name: '社保卡', w: 26, h: 32, category: 'more', keywords: '社保' },
+        'health_cert': { name: '健康证', w: 25, h: 35, category: 'more', keywords: '健康证' }
     };
+
+    // Calculate pixel sizes and ratios
+    const SIZE_CONFIG = {};
+    Object.keys(SPECS_DATA).forEach(key => {
+        const spec = SPECS_DATA[key];
+        const w = Math.round(spec.w * 11.811); // mm to px at 300 DPI
+        const h = Math.round(spec.h * 11.811);
+        SIZE_CONFIG[key] = { w, h, ratio: w/h };
+    });
 
     // --- DOM Elements ---
     const elements = {
@@ -275,6 +326,11 @@
 
     elements.beautifyCheck.addEventListener('change', (e) => {
         state.config.beautify = e.target.checked;
+    });
+
+    // Initialize specs on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        renderSpecs();
     });
 
     function handleDragOver(e) {
@@ -333,10 +389,8 @@
     function selectSize(sizeKey) {
         state.config.size = sizeKey;
         
-        // UI Update
-        document.querySelectorAll('.size-card').forEach(el => {
-            el.classList.toggle('active', el.dataset.size === sizeKey);
-        });
+        // Re-render to update active state
+        renderSpecs(currentCategory, currentSearch);
 
         // Cropper Update
         if (state.cropper) {
@@ -563,6 +617,86 @@
             link.click();
             document.body.removeChild(link);
         }, 'image/png');
+    }
+
+    // --- Specs Management ---
+    let currentCategory = 'all';
+    let currentSearch = '';
+
+    function renderSpecs(category = 'all', search = '') {
+        const container = document.getElementById('specsContainer');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        let filteredSpecs = Object.entries(SPECS_DATA);
+        
+        // Filter by category
+        if (category !== 'all') {
+            filteredSpecs = filteredSpecs.filter(([key, spec]) => spec.category === category);
+        }
+        
+        // Filter by search
+        if (search) {
+            const searchLower = search.toLowerCase();
+            filteredSpecs = filteredSpecs.filter(([key, spec]) => 
+                spec.name.toLowerCase().includes(searchLower) || 
+                spec.keywords.toLowerCase().includes(searchLower)
+            );
+        }
+        
+        // Render
+        filteredSpecs.forEach(([key, spec]) => {
+            const isActive = state.config.size === key;
+            const btn = document.createElement('button');
+            btn.onclick = () => selectSize(key);
+            btn.setAttribute('data-size', key);
+            btn.className = `size-card ${isActive ? 'active' : ''} text-left p-2.5 rounded-lg border-2 border-gray-100 bg-white`;
+            btn.innerHTML = `
+                <div class="font-bold text-gray-800 text-xs">${spec.name}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">${spec.w} × ${spec.h} mm</div>
+                <div class="text-[9px] text-gray-400">${SIZE_CONFIG[key].w} × ${SIZE_CONFIG[key].h} px</div>
+            `;
+            container.appendChild(btn);
+        });
+        
+        if (filteredSpecs.length === 0) {
+            container.innerHTML = '<div class="col-span-2 text-center text-gray-400 text-sm py-8">未找到匹配的规格</div>';
+        }
+    }
+
+    function filterCategory(category) {
+        currentCategory = category;
+        currentSearch = '';
+        document.getElementById('specSearch').value = '';
+        
+        // Update tab styles
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            const isActive = tab.dataset.category === category;
+            if (isActive) {
+                tab.className = 'category-tab active whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-blue-50 text-blue-600 font-medium';
+            } else {
+                tab.className = 'category-tab whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200';
+            }
+        });
+        
+        renderSpecs(category, currentSearch);
+    }
+
+    function searchSpecs(query) {
+        currentSearch = query;
+        currentCategory = 'all';
+        
+        // Reset category tabs
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            if (tab.dataset.category === 'all') {
+                tab.className = 'category-tab active whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-blue-50 text-blue-600 font-medium';
+            } else {
+                tab.className = 'category-tab whitespace-nowrap px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200';
+            }
+        });
+        
+        renderSpecs('all', query);
     }
 </script>
 {% endblock %}

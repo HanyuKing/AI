@@ -4,16 +4,21 @@ from PIL import Image
 from rembg import remove, new_session
 import io
 
-# 证件照标准尺寸（单位：毫米），DPI 300
-# 格式: (宽_mm, 高_mm)
+# 尝试相对导入，如果失败则使用绝对导入
+try:
+    from .id_photo_specs import ID_PHOTO_SPECS, BG_COLOR_PRESETS, get_spec_by_id, search_specs
+except ImportError:
+    from id_photo_specs import ID_PHOTO_SPECS, BG_COLOR_PRESETS, get_spec_by_id, search_specs
+
+# 向后兼容：保留旧的 ID_PHOTO_SIZES
 ID_PHOTO_SIZES = {
-    "1inch": (25, 35),           # 1寸
-    "small_1inch": (22, 32),     # 小1寸
-    "large_1inch": (33, 48),     # 大1寸
-    "2inch": (35, 49),           # 2寸
-    "small_2inch": (33, 48),     # 小2寸（与大1寸相同）
-    "large_2inch": (35, 53),     # 大2寸
-    "5inch": (89, 127),          # 5寸
+    "1inch": (25, 35),
+    "small_1inch": (22, 32),
+    "large_1inch": (33, 48),
+    "2inch": (35, 49),
+    "small_2inch": (33, 48),
+    "large_2inch": (35, 53),
+    "5inch": (89, 127),
 }
 
 class IdPhotoProcessor:
@@ -178,8 +183,10 @@ class IdPhotoProcessor:
 
     def generate_id_photo(
         self,
-        size_name: str = "1inch",
-        bg_color: tuple = (255, 255, 255),
+        spec_id: str = None,
+        size_name: str = None,  # 向后兼容旧API
+        bg_color: tuple = None,
+        bg_color_name: str = None,
         use_beautify: bool = True,
         dpi: int = 300
     ) -> Image.Image:
@@ -187,19 +194,48 @@ class IdPhotoProcessor:
         生成标准证件照。
         
         Args:
-            size_name: 尺寸规格（如 "1inch", "2inch" 等）
-            bg_color: 背景颜色 (R, G, B)，如果是 None，则返回透明背景
+            spec_id: 规格ID（如 "passport", "driving_license", "civil_servant" 等）
+            size_name: [已弃用] 旧的尺寸名称（如 "1inch", "2inch"），为了向后兼容保留
+            bg_color: 背景颜色 (R, G, B)，如果是 None 且未指定 bg_color_name，则返回透明背景
+            bg_color_name: 背景颜色名称（如 "white", "blue", "red"），会覆盖 bg_color
             use_beautify: 是否使用美颜功能
             dpi: 输出图片的 DPI（默认 300）
             
         Returns:
             PIL Image 对象
         """
-        # 1. 可选：美颜处理
+        # 向后兼容：如果使用了旧的 size_name 参数
+        if size_name and not spec_id:
+            spec_id = size_name
+        elif not spec_id and not size_name:
+            spec_id = "1inch"  # 默认值
+        
+        # 1. 获取规格信息
+        spec = get_spec_by_id(spec_id)
+        
+        # 如果新规格系统中找不到，尝试从旧的 ID_PHOTO_SIZES 中获取
+        if spec is None and spec_id in ID_PHOTO_SIZES:
+            # 创建一个临时的 spec 对象用于向后兼容
+            width_mm, height_mm = ID_PHOTO_SIZES[spec_id]
+            spec = {
+                "name": spec_id,
+                "size_mm": (width_mm, height_mm),
+                "description": f"标准 {spec_id} 尺寸"
+            }
+        elif spec is None:
+            raise ValueError(f"不支持的规格ID: {spec_id}")
+        
+        # 2. 处理背景颜色
+        if bg_color_name:
+            if bg_color_name not in BG_COLOR_PRESETS:
+                raise ValueError(f"不支持的背景颜色: {bg_color_name}")
+            bg_color = BG_COLOR_PRESETS[bg_color_name]["rgb"]
+        
+        # 3. 可选：美颜处理
         if use_beautify:
             self.original_image = self.beautify(smooth_strength=8, brighten_strength=1.15)
         
-        # 2. 抠图并换背景
+        # 4. 抠图并换背景
         if bg_color is None:
             # 仅移除背景，返回透明 PNG
             result_img = self.remove_background(
@@ -217,21 +253,18 @@ class IdPhotoProcessor:
                 remove_stray_hairs=False
             )
         
-        # 3. 调整到标准尺寸
-        if size_name not in ID_PHOTO_SIZES:
-            raise ValueError(f"不支持的尺寸: {size_name}，可选值: {list(ID_PHOTO_SIZES.keys())}")
-        
-        width_mm, height_mm = ID_PHOTO_SIZES[size_name]
+        # 5. 调整到标准尺寸
+        width_mm, height_mm = spec["size_mm"]
         
         # 毫米转像素 (DPI = 300 时，1mm = 11.811 像素)
         mm_to_px = dpi / 25.4
         target_width_px = int(width_mm * mm_to_px)
         target_height_px = int(height_mm * mm_to_px)
         
-        # 4. 智能裁剪/缩放到目标尺寸
+        # 6. 智能裁剪/缩放到目标尺寸
         result_img = self._smart_crop_and_resize(result_img, target_width_px, target_height_px)
         
-        # 5. 设置 DPI 元数据
+        # 7. 设置 DPI 元数据
         result_img.info['dpi'] = (dpi, dpi)
         
         return result_img
