@@ -244,7 +244,8 @@ class IdPhotoProcessor:
         
         # 3. 可选：美颜处理（降低强度，避免眼镜等细节模糊）
         if use_beautify:
-            self.original_image = self.beautify(smooth_strength=5, brighten_strength=1.1)
+            # 降低平滑强度：从 5 降到 2，保留更多细节
+            self.original_image = self.beautify(smooth_strength=2, brighten_strength=1.1)
         
         # 4. 抠图并换背景
         if bg_color is None:
@@ -370,7 +371,16 @@ class IdPhotoProcessor:
         # 4. 缩放到目标尺寸 (核心步骤：使用 Lanczos)
         img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-        # 5. 添加背景色
+        # 5. 锐化 (针对眼镜等细节优化)
+        try:
+            from PIL import ImageEnhance
+            # 适度锐化，增强边缘清晰度
+            enhancer = ImageEnhance.Sharpness(img)
+            img = enhancer.enhance(1.2)  # 1.0 是原图，1.2 是轻微锐化
+        except Exception as e:
+            print(f"锐化失败: {e}")
+
+        # 6. 添加背景色
         if bg_color and bg_color != 'transparent':
             try:
                 from PIL import ImageColor
@@ -393,7 +403,7 @@ class IdPhotoProcessor:
                 print(f"背景色处理失败: {e}")
                 # 忽略错误，返回透明背景
 
-        # 6. 设置 DPI
+        # 7. 设置 DPI
         img.info['dpi'] = (dpi, dpi)
 
         return img

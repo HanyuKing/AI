@@ -300,6 +300,21 @@ async def get_svg_info(file: UploadFile = File(...)):
 # 证件照生成端点
 # ==============================================
 
+@router.get("/image/id-photo/specs")
+async def get_id_photo_specs():
+    """
+    获取所有证件照规格
+    """
+    try:
+        specs = IdPhotoService.get_all_specs()
+        bg_colors = IdPhotoService.get_background_colors()
+        return {
+            "specs": specs,
+            "bg_colors": bg_colors
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/image/id-photo")
 async def generate_id_photo(
     background_tasks: BackgroundTasks,

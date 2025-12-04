@@ -317,6 +317,296 @@ ID_PHOTO_SPECS = {
         }
     },
     
+    # ========== 医疗卫生 ==========
+    "healthcare": {
+        "category_name": "医疗卫生",
+        "icon": "⚕️",
+        "specs": {
+            "physician_license": {
+                "name": "医师执业证",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "医师执业资格证书",
+                "usage": "医师资格考试、执业注册"
+            },
+            "nurse_license": {
+                "name": "护士资格证",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "护士执业资格证书",
+                "usage": "护士资格考试、执业注册"
+            },
+            "pharmacist_license": {
+                "name": "执业药师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "执业药师资格证书",
+                "usage": "执业药师考试"
+            },
+            "dietitian_cert": {
+                "name": "营养师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "营养师资格证书",
+                "usage": "营养师考试"
+            },
+        }
+    },
+    
+    # ========== 金融财会 ==========
+    "finance": {
+        "category_name": "金融财会",
+        "icon": "💰",
+        "specs": {
+            "securities_qualification": {
+                "name": "证券从业",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "证券从业资格考试",
+                "usage": "证券从业人员资格"
+            },
+            "fund_qualification": {
+                "name": "基金从业",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "基金从业资格考试",
+                "usage": "基金从业人员资格"
+            },
+            "banking_qualification": {
+                "name": "银行从业",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "银行业专业人员资格",
+                "usage": "银行从业考试"
+            },
+            "insurance_agent": {
+                "name": "保险代理人",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "保险代理人资格",
+                "usage": "保险代理资格考试"
+            },
+            "intermediate_accountant": {
+                "name": "中级会计师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "中级会计职称",
+                "usage": "中级会计师考试"
+            },
+        }
+    },
+    
+    # ========== IT科技 ==========
+    "it_tech": {
+        "category_name": "IT科技",
+        "icon": "💻",
+        "specs": {
+            "soft_exam": {
+                "name": "软考",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white", "blue"],
+                "description": "计算机技术与软件专业技术资格",
+                "usage": "软考报名"
+            },
+            "pmp": {
+                "name": "PMP",
+                "size_mm": (51, 51),
+                "size_px": (600, 600),
+                "common_bg": ["white"],
+                "description": "项目管理专业人士资格",
+                "usage": "PMP认证考试",
+                "note": "正方形"
+            },
+            "cissp": {
+                "name": "CISSP",
+                "size_mm": (51, 51),
+                "size_px": (600, 600),
+                "common_bg": ["white"],
+                "description": "注册信息系统安全专家",
+                "usage": "CISSP认证"
+            },
+        }
+    },
+    
+    # ========== 建筑工程 ==========
+    "construction": {
+        "category_name": "建筑工程",
+        "icon": "🏗️",
+        "specs": {
+            "constructor_1": {
+                "name": "一级建造师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "一级建造师执业资格",
+                "usage": "一建考试报名"
+            },
+            "constructor_2": {
+                "name": "二级建造师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "二级建造师执业资格",
+                "usage": "二建考试报名"
+            },
+            "cost_engineer": {
+                "name": "造价工程师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "造价工程师资格",
+                "usage": "造价师考试"
+            },
+            "supervisor": {
+                "name": "监理工程师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "监理工程师资格",
+                "usage": "监理师考试"
+            },
+            "fire_engineer": {
+                "name": "消防工程师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "注册消防工程师",
+                "usage": "消防工程师考试"
+            },
+        }
+    },
+    
+    # ========== 交通运输 ==========
+    "transportation": {
+        "category_name": "交通运输",
+        "icon": "🚢",
+        "specs": {
+            "seamans_certificate": {
+                "name": "船员证",
+                "size_mm": (33, 48),
+                "size_px": (390, 567),
+                "common_bg": ["white"],
+                "description": "船员适任证书",
+                "usage": "船员资格考试"
+            },
+            "pilot_license": {
+                "name": "飞行执照",
+                "size_mm": (35, 45),
+                "size_px": (413, 531),
+                "common_bg": ["white"],
+                "description": "民用航空器驾驶员执照",
+                "usage": "飞行员执照申请"
+            },
+            "hazmat_cert": {
+                "name": "危化品资格证",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "危险化学品从业资格",
+                "usage": "危化品运输资格"
+            },
+        }
+    },
+    
+    # ========== 文化教育 ==========
+    "culture": {
+        "category_name": "文化教育",
+        "icon": "🎭",
+        "specs": {
+            "tour_guide": {
+                "name": "导游证",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "导游人员资格证书",
+                "usage": "导游资格考试"
+            },
+            "psychologist": {
+                "name": "心理咨询师",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "心理咨询师资格",
+                "usage": "心理咨询师考试"
+            },
+            "host_cert": {
+                "name": "主持人证",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["blue"],
+                "description": "播音主持资格",
+                "usage": "播音主持考试"
+            },
+            "librarian": {
+                "name": "图书管理员",
+                "size_mm": (25, 35),
+                "size_px": (295, 413),
+                "common_bg": ["white"],
+                "description": "图书管理员资格",
+                "usage": "图书管理员考试"
+            },
+        }
+    },
+    
+    # ========== 国际签证（补充） ==========
+    "international_visa": {
+        "category_name": "国际签证",
+        "icon": "🌍",
+        "specs": {
+            "visa_japan": {
+                "name": "日本签证",
+                "size_mm": (45, 45),
+                "size_px": (531, 531),
+                "common_bg": ["white"],
+                "description": "日本签证照片",
+                "usage": "日本签证申请",
+                "note": "正方形，白色背景"
+            },
+            "visa_korea": {
+                "name": "韩国签证",
+                "size_mm": (35, 45),
+                "size_px": (413, 531),
+                "common_bg": ["white"],
+                "description": "韩国签证照片",
+                "usage": "韩国签证申请"
+            },
+            "visa_canada": {
+                "name": "加拿大签证",
+                "size_mm": (35, 45),
+                "size_px": (413, 531),
+                "common_bg": ["white"],
+                "description": "加拿大签证照片",
+                "usage": "加拿大签证申请"
+            },
+            "visa_australia": {
+                "name": "澳大利亚签证",
+                "size_mm": (35, 45),
+                "size_px": (413, 531),
+                "common_bg": ["white"],
+                "description": "澳大利亚签证照片",
+                "usage": "澳洲签证申请"
+            },
+            "visa_uk": {
+                "name": "英国签证",
+                "size_mm": (35, 45),
+                "size_px": (413, 531),
+                "common_bg": ["white"],
+                "description": "英国签证照片",
+                "usage": "英国签证申请"
+            },
+        }
+    },
+    
     # ========== 其他用途 ==========
     "others": {
         "category_name": "其他用途",
