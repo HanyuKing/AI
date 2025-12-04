@@ -363,3 +363,59 @@ async def generate_id_photo(
         if os.path.exists(output_path):
             cleanup_files(output_path)
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/image/id-photo/render")
+async def render_id_photo(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    crop_x: float = Form(...),
+    crop_y: float = Form(...),
+    crop_w: float = Form(...),
+    crop_h: float = Form(...),
+    target_w: int = Form(...),
+    target_h: int = Form(...),
+    rotate: float = Form(0),
+    scale_x: float = Form(1),
+    scale_y: float = Form(1),
+    bg_color: str = Form(None),
+    dpi: int = Form(300)
+):
+    """
+    后端渲染证件照（高保真）
+    """
+    input_path = await save_upload_file(file)
+    
+    # 确定输出文件名
+    original_name = os.path.splitext(file.filename)[0]
+    output_filename = f"id_photo_render_{original_name}.png"
+    
+    output_path = str(settings.TEMP_DIR / f"{uuid.uuid4()}_{output_filename}")
+    
+    try:
+        IdPhotoService.render_id_photo(
+            input_path=input_path,
+            output_path=output_path,
+            crop_x=crop_x,
+            crop_y=crop_y,
+            crop_w=crop_w,
+            crop_h=crop_h,
+            target_w=target_w,
+            target_h=target_h,
+            rotate=rotate,
+            scale_x=scale_x,
+            scale_y=scale_y,
+            bg_color=bg_color,
+            dpi=dpi
+        )
+        
+        background_tasks.add_task(cleanup_files, input_path, output_path)
+        return FileResponse(
+            output_path, 
+            filename=output_filename,
+            media_type="image/png"
+        )
+    except Exception as e:
+        cleanup_files(input_path)
+        if os.path.exists(output_path):
+            cleanup_files(output_path)
+        raise HTTPException(status_code=500, detail=str(e))

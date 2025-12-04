@@ -29,8 +29,8 @@ class IdPhotoProcessor:
         else:
             raise ValueError("必须提供 image_path 或 image_data")
         
-        # 确保图像是 RGB 模式
-        if self.original_image.mode != 'RGB':
+        # 确保图像是 RGB 或 RGBA 模式
+        if self.original_image.mode not in ('RGB', 'RGBA'):
             self.original_image = self.original_image.convert('RGB')
             
         # 初始化 rembg 会话，使用 SOTA 模型 BiRefNet-portrait
@@ -318,6 +318,85 @@ class IdPhotoProcessor:
         # 裁剪并缩放
         cropped = img.crop((left, top, right, bottom))
         return cropped.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+    def render_id_photo(
+        self,
+        crop_x: float,
+        crop_y: float,
+        crop_w: float,
+        crop_h: float,
+        target_w: int,
+        target_h: int,
+        rotate: float = 0,
+        scale_x: float = 1,
+        scale_y: float = 1,
+        bg_color: str = None,
+        dpi: int = 300
+    ) -> Image.Image:
+        """
+        根据前端裁剪参数，后端高保真渲染最终图片。
+        使用 Lanczos 滤镜进行重采样，确保最佳清晰度。
+        """
+        img = self.original_image.copy()
+
+        # 1. 旋转
+        if rotate != 0:
+            # expand=True 确保旋转后不被裁剪，保持完整画面
+            # Pillow rotate 是逆时针，Cropper.js rotate 是顺时针，所以取负
+            img = img.rotate(-rotate, expand=True, resample=Image.Resampling.BICUBIC)
+
+        # 2. 翻转
+        if scale_x == -1:
+            img = img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        if scale_y == -1:
+            img = img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+
+        # 3. 裁剪
+        # 确保坐标是整数
+        x = int(round(crop_x))
+        y = int(round(crop_y))
+        w = int(round(crop_w))
+        h = int(round(crop_h))
+        
+        # 边界检查
+        img_w, img_h = img.size
+        x = max(0, x)
+        y = max(0, y)
+        w = min(w, img_w - x)
+        h = min(h, img_h - y)
+        
+        img = img.crop((x, y, x + w, y + h))
+
+        # 4. 缩放到目标尺寸 (核心步骤：使用 Lanczos)
+        img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+        # 5. 添加背景色
+        if bg_color and bg_color != 'transparent':
+            try:
+                from PIL import ImageColor
+                # 解析颜色
+                if bg_color.startswith('#'):
+                    color = ImageColor.getrgb(bg_color)
+                else:
+                    # 尝试直接解析
+                    color = ImageColor.getrgb(bg_color)
+                
+                bg = Image.new("RGB", img.size, color)
+                # 使用 img 的 alpha 通道作为掩码
+                if img.mode == 'RGBA':
+                    bg.paste(img, (0, 0), img)
+                    img = bg
+                else:
+                    bg.paste(img, (0, 0))
+                    img = bg
+            except Exception as e:
+                print(f"背景色处理失败: {e}")
+                # 忽略错误，返回透明背景
+
+        # 6. 设置 DPI
+        img.info['dpi'] = (dpi, dpi)
+
+        return img
 
 if __name__ == "__main__":
     # 简单的命令行测试

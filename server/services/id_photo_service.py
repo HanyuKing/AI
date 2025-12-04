@@ -122,4 +122,56 @@ class IdPhotoService:
         """获取背景颜色预设（新API）"""
         return BG_COLOR_PRESETS
 
+    @staticmethod
+    def render_id_photo(
+        input_path: str,
+        output_path: str,
+        crop_x: float,
+        crop_y: float,
+        crop_w: float,
+        crop_h: float,
+        target_w: int,
+        target_h: int,
+        rotate: float = 0,
+        scale_x: float = 1,
+        scale_y: float = 1,
+        bg_color: str = None,
+        dpi: int = 300
+    ) -> None:
+        """
+        Backend rendering for ID photo.
+        """
+        global _processor_class
+        if _processor_class is None:
+            IdPhotoProcessor, _ = _lazy_import_processor()
+            _processor_class = IdPhotoProcessor
+        else:
+            IdPhotoProcessor = _processor_class
+            
+        processor = IdPhotoProcessor(image_path=input_path)
+        
+        try:
+            result_img = processor.render_id_photo(
+                crop_x=crop_x,
+                crop_y=crop_y,
+                crop_w=crop_w,
+                crop_h=crop_h,
+                target_w=target_w,
+                target_h=target_h,
+                rotate=rotate,
+                scale_x=scale_x,
+                scale_y=scale_y,
+                bg_color=bg_color,
+                dpi=dpi
+            )
+            
+            # Save
+            if output_path.lower().endswith('.png'):
+                result_img.save(output_path, "PNG", dpi=(dpi, dpi))
+            else:
+                result_img.save(output_path, "JPEG", quality=95, dpi=(dpi, dpi))
+                
+        except Exception as e:
+            raise RuntimeError(f"Failed to render ID photo: {str(e)}")
+
 
