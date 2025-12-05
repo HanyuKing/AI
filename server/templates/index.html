@@ -1,283 +1,263 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="text-center mb-12">
-    <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
-        开发者与办公的<span class="text-primary">瑞士军刀</span>
-    </h1>
-    <p class="mt-5 max-w-xl mx-auto text-xl text-gray-500">
-        简单、高效、免费的在线工具集。无需安装，即开即用。
-    </p>
-</div>
-
-<!-- Category: Media Tools -->
-<div class="mb-12">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-primary pl-4">媒体处理</h2>
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <!-- PDF Compress -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-red-100 rounded-md p-3">
-                        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+<div class="py-6">
+    <!-- Category: Media Tools -->
+    <div class="mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span class="w-1 h-5 bg-primary rounded-full mr-2"></span>
+            媒体处理
+        </h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <!-- PDF Compress -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-red-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                     </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">PDF 压缩</dt>
-                        <dd class="mt-1 text-sm text-gray-500">智能压缩 PDF 文件大小，保持清晰度。</dd>
-                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">PDF 压缩</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">智能压缩 PDF 文件大小，保持清晰度。</dd>
+                    <a href="/tools/pdf-compress" class="absolute inset-0 z-10"></a>
                 </div>
             </div>
-            <a href="/tools/pdf-compress" class="absolute inset-0 z-10"></a>
+
+            <!-- Image Convert -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-purple-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">图片格式转换</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">支持 JPG, PNG, WEBP, PDF 互转。</dd>
+                    <a href="/tools/image-convert" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- Image Resize/Rotate -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-blue-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                        </svg>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">图片编辑</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">旋转、缩放、压缩、裁剪图片。</dd>
+                    <a href="/tools/image-edit" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- SVG Converter -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="absolute top-3 right-3">
+                    <span
+                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700">NEW</span>
+                </div>
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-green-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        </svg>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">SVG转换器</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">9种SVG格式互转、矢量化、优化工具。</dd>
+                    <a href="/tools/svg-converter" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- ID Photo Cropper -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="absolute top-3 right-3">
+                    <span
+                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700">NEW</span>
+                </div>
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-indigo-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">证件照裁剪</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">智能抠图、自由裁剪、一键换底色。</dd>
+                    <a href="/tools/id-photo" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <!-- Image Convert -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-purple-100 rounded-md p-3">
-                        <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+    <!-- Category: Dev Tools -->
+    <div class="mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span class="w-1 h-5 bg-secondary rounded-full mr-2"></span>
+            开发工具
+        </h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <!-- JSON Formatter -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <span
+                            class="text-yellow-500 font-bold text-2xl group-hover:scale-110 transition-transform duration-300 inline-block">{}</span>
                     </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">图片格式转换</dt>
-                        <dd class="mt-1 text-sm text-gray-500">支持 JPG, PNG, WEBP, PDF 互转。</dd>
-                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">JSON 格式化</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">美化、压缩、校验 JSON 数据。</dd>
+                    <a href="/tools/json" class="absolute inset-0 z-10"></a>
                 </div>
             </div>
-            <a href="/tools/image-convert" class="absolute inset-0 z-10"></a>
+
+            <!-- URL Encoder -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <span
+                            class="text-orange-500 font-bold text-2xl group-hover:scale-110 transition-transform duration-300 inline-block">%</span>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">URL 编解码</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">URL 参数编码与解码。</dd>
+                    <a href="/tools/url-encoder" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- Base64 -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <span
+                            class="text-green-500 font-bold text-xl group-hover:scale-110 transition-transform duration-300 inline-block">64</span>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">Base64 转换</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">Base64 编码与解码。</dd>
+                    <a href="/tools/base64" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- UUID -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <span
+                            class="text-gray-500 font-bold text-xl group-hover:scale-110 transition-transform duration-300 inline-block">ID</span>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">UUID 生成</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">批量生成 UUID。</dd>
+                    <a href="/tools/uuid" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- Base Converter -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <span
+                            class="text-teal-500 font-bold text-xl group-hover:scale-110 transition-transform duration-300 inline-block">0x</span>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">进制转换</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">二、八、十、十六进制互转。</dd>
+                    <a href="/tools/base-convert" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- Password Gen -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-indigo-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">密码生成器</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">生成安全的高强度随机密码。</dd>
+                    <a href="/tools/password" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- Text Diff -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-rose-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">文本对比</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">快速对比两段文本的差异。</dd>
+                    <a href="/tools/diff" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <!-- Image Resize/Rotate -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-blue-100 rounded-md p-3">
-                        <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+    <!-- Category: Utilities -->
+    <div class="mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span class="w-1 h-5 bg-pink-500 rounded-full mr-2"></span>
+            实用工具
+        </h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <!-- Timestamp -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-pink-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">图片编辑</dt>
-                        <dd class="mt-1 text-sm text-gray-500">旋转、缩放、压缩、裁剪图片。</dd>
-                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">时间戳转换</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">Unix 时间戳与日期互转。</dd>
+                    <a href="/tools/timestamp" class="absolute inset-0 z-10"></a>
                 </div>
             </div>
-             <a href="/tools/image-edit" class="absolute inset-0 z-10"></a>
-        </div>
 
-        <!-- SVG Converter -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group border-2 border-green-200">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-gradient-to-br from-green-100 to-teal-100 rounded-md p-3">
-                        <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            <!-- QR Code -->
+            <div
+                class="tool-card group relative bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-gray-700 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                     </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate flex items-center">
-                            SVG转换器
-                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                NEW
-                            </span>
-                        </dt>
-                        <dd class="mt-1 text-sm text-gray-500">9种SVG格式互转、矢量化、优化工具。</dd>
-                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">二维码生成</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">快速生成文本或链接的二维码。</dd>
+                    <a href="/tools/qrcode" class="absolute inset-0 z-10"></a>
                 </div>
             </div>
-            <a href="/tools/svg-converter" class="absolute inset-0 z-10"></a>
-        </div>
-
-        <!-- ID Photo Cropper -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group border-2 border-indigo-200">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-md p-3">
-                        <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate flex items-center">
-                            证件照裁剪
-                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                                NEW
-                            </span>
-                        </dt>
-                        <dd class="mt-1 text-sm text-gray-500">智能抠图、自由裁剪、一键换底色。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/id-photo" class="absolute inset-0 z-10"></a>
         </div>
     </div>
 </div>
-
-<!-- Category: Dev Tools -->
-<div class="mb-12">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-secondary pl-4">开发工具</h2>
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <!-- JSON Formatter -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-yellow-100 rounded-md p-3">
-                        <span class="text-yellow-600 font-bold text-lg">{}</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">JSON 格式化</dt>
-                        <dd class="mt-1 text-sm text-gray-500">美化、压缩、校验 JSON 数据。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/json" class="absolute inset-0 z-10"></a>
-        </div>
-
-        <!-- URL Encoder -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-orange-100 rounded-md p-3">
-                        <span class="text-orange-600 font-bold text-lg">%20</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">URL 编解码</dt>
-                        <dd class="mt-1 text-sm text-gray-500">URL 参数编码与解码。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/url-encoder" class="absolute inset-0 z-10"></a>
-        </div>
-
-        <!-- Base64 -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-green-100 rounded-md p-3">
-                        <span class="text-green-600 font-bold text-sm">64</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">Base64 转换</dt>
-                        <dd class="mt-1 text-sm text-gray-500">Base64 编码与解码。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/base64" class="absolute inset-0 z-10"></a>
-        </div>
-        
-        <!-- UUID -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-gray-100 rounded-md p-3">
-                        <span class="text-gray-600 font-bold text-sm">ID</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">UUID 生成</dt>
-                        <dd class="mt-1 text-sm text-gray-500">批量生成 UUID。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/uuid" class="absolute inset-0 z-10"></a>
-        </div>
-
-        <!-- Base Converter -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-teal-100 rounded-md p-3">
-                         <span class="text-teal-600 font-bold text-sm">0x</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">进制转换</dt>
-                        <dd class="mt-1 text-sm text-gray-500">二、八、十、十六进制互转。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/base-convert" class="absolute inset-0 z-10"></a>
-        </div>
-
-        <!-- Password Gen -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-indigo-100 rounded-md p-3">
-                         <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">密码生成器</dt>
-                        <dd class="mt-1 text-sm text-gray-500">生成安全的高强度随机密码。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/password" class="absolute inset-0 z-10"></a>
-        </div>
-
-        <!-- Text Diff -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-rose-100 rounded-md p-3">
-                         <svg class="h-6 w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">文本对比</dt>
-                        <dd class="mt-1 text-sm text-gray-500">快速对比两段文本的差异。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/diff" class="absolute inset-0 z-10"></a>
-        </div>
-    </div>
-</div>
-
-<!-- Category: Utilities -->
-<div class="mb-12">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-pink-500 pl-4">实用工具</h2>
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <!-- Timestamp -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-pink-100 rounded-md p-3">
-                        <svg class="h-6 w-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">时间戳转换</dt>
-                        <dd class="mt-1 text-sm text-gray-500">Unix 时间戳与日期互转。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/timestamp" class="absolute inset-0 z-10"></a>
-        </div>
-
-        <!-- QR Code -->
-        <div class="tool-card bg-white overflow-hidden shadow rounded-lg transition duration-300 ease-in-out cursor-pointer hover:shadow-lg relative group">
-            <div class="px-4 py-5 sm:p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-gray-800 rounded-md p-3">
-                         <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dt class="text-lg font-medium text-gray-900 truncate">二维码生成</dt>
-                        <dd class="mt-1 text-sm text-gray-500">快速生成文本或链接的二维码。</dd>
-                    </div>
-                </div>
-            </div>
-            <a href="/tools/qrcode" class="absolute inset-0 z-10"></a>
-        </div>
-    </div>
-</div>
-
 {% endblock %}

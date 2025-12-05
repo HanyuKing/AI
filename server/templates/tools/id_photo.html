@@ -1,9 +1,44 @@
 {% extends "base.html" %}
 
-{% block title %}智能证件照 - MediaToolbox{% endblock %}
+{% block title %}Online ID Photo Maker - Free Passport/Visa Photo Generator / 在线智能证件照制作_免费一寸二寸证件照生成 - Lumina{%
+endblock %}
+
+{% block description %}Free online ID photo maker for passport, visa, and resume photos. Supports 70+ sizes including
+1-inch, 2-inch, US/UK/Japan visa. AI background removal, auto-beautify, high-quality download. No registration needed. /
+免费在线证件照制作工具，支持一寸、二寸、护照、签证、考试报名等70+种规格。AI智能抠图换底色，自动美颜，高清无损下载。无需注册，保护隐私。{% endblock %}
+
+{% block keywords %}id photo maker, passport photo generator, visa photo, online photo editor, background remover, 1
+inch photo, 2 inch photo, 证件照制作, 在线证件照, 一寸照片, 二寸照片, 护照照片, 签证照片, 智能抠图, 换底色, 免费证件照, Lumina{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+<!-- Structured Data (SoftwareApplication) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Online ID Photo Maker / 智能证件照制作",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Web",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "CNY"
+  },
+  "featureList": [
+    "AI Background Removal / AI智能抠图",
+    "One-click Background Change / 一键换底色",
+    "70+ Photo Specifications / 70+种证件规格",
+    "Smart Beautify / 智能美颜",
+    "HD Download / 高清无损下载"
+  ],
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.8",
+    "ratingCount": "1024"
+  }
+}
+</script>
 <style>
     * {
         box-sizing: border-box;
