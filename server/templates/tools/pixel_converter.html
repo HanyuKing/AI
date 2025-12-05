@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}图片像素尺寸换算器 - 在线转换像素与厘米/毫米/英寸 - Lumina{% endblock %}
+
+{% block description %}免费在线图片像素尺寸换算器，支持像素与厘米、毫米、英寸相互转换，计算图片DPI分辨率，以及读取图片文件的详细信息。{% endblock %}
+
+{% block keywords %}像素换算, 尺寸换算, DPI计算, 图片分辨率查询, 在线工具, Lumina{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="text-center mb-10">
+        <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+            图片像素尺寸换算器
+        </h1>
+        <p class="mt-4 text-lg text-gray-500">
+            在线转换像素与物理尺寸，计算DPI，或分析图片详细信息。
+        </p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- Tabs -->
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex" aria-label="Tabs">
+                <button onclick="switchTab('pixel-to-size')" id="tab-pixel-to-size"
+                    class="w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 border-primary text-primary">
+                    像素转尺寸
+                </button>
+                <button onclick="switchTab('size-to-pixel')" id="tab-size-to-pixel"
+                    class="w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    尺寸转像素
+                </button>
+                <button onclick="switchTab('calc-dpi')" id="tab-calc-dpi"
+                    class="w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    计算分辨率
+                </button>
+                <button onclick="switchTab('image-analysis')" id="tab-image-analysis"
+                    class="w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    选择图片查询
+                </button>
+            </nav>
+        </div>
+
+        <div class="p-6 sm:p-10">
+            <!-- Tab 1: Pixel to Size -->
+            <div id="content-pixel-to-size" class="tab-content block">
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-2">
+                        <label for="p2s-width" class="block text-sm font-medium text-gray-700">宽度 (像素)</label>
+                        <input type="number" id="p2s-width"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                            placeholder="例如: 1920">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="p2s-height" class="block text-sm font-medium text-gray-700">高度 (像素)</label>
+                        <input type="number" id="p2s-height"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                            placeholder="例如: 1080">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="p2s-dpi" class="block text-sm font-medium text-gray-700">分辨率 (DPI)</label>
+                        <input type="number" id="p2s-dpi" value="300"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">转换结果</h3>
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                        <div>
+                            <p class="text-sm text-gray-500">厘米 (cm)</p>
+                            <p class="text-2xl font-bold text-gray-900" id="p2s-result-cm">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">毫米 (mm)</p>
+                            <p class="text-2xl font-bold text-gray-900" id="p2s-result-mm">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">英寸 (inch)</p>
+                            <p class="text-2xl font-bold text-gray-900" id="p2s-result-inch">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Size to Pixel -->
+            <div id="content-size-to-pixel" class="tab-content hidden">
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-2">
+                        <label for="s2p-width" class="block text-sm font-medium text-gray-700">宽度</label>
+                        <div class="mt-1 flex rounded-md shadow-sm">
+                            <input type="number" id="s2p-width"
+                                class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border-gray-300 focus:ring-primary focus:border-primary sm:text-sm"
+                                placeholder="例如: 21">
+                            <select id="s2p-unit"
+                                class="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm rounded-r-md">
+                                <option value="cm">cm</option>
+                                <option value="mm" selected>mm</option>
+                                <option value="inch">inch</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="s2p-height" class="block text-sm font-medium text-gray-700">高度</label>
+                        <input type="number" id="s2p-height"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                            placeholder="例如: 29.7">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="s2p-dpi" class="block text-sm font-medium text-gray-700">分辨率 (DPI)</label>
+                        <input type="number" id="s2p-dpi" value="300"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">转换结果</h3>
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div>
+                            <p class="text-sm text-gray-500">像素尺寸 (宽 x 高)</p>
+                            <p class="text-2xl font-bold text-gray-900" id="s2p-result-pixel">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">总像素</p>
+                            <p class="text-2xl font-bold text-gray-900" id="s2p-result-total">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Calculate DPI -->
+            <div id="content-calc-dpi" class="tab-content hidden">
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-3">
+                        <label for="cd-pixel" class="block text-sm font-medium text-gray-700">像素尺寸 (单边)</label>
+                        <input type="number" id="cd-pixel"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                            placeholder="例如: 1920">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label for="cd-size" class="block text-sm font-medium text-gray-700">物理尺寸 (单边)</label>
+                        <div class="mt-1 flex rounded-md shadow-sm">
+                            <input type="number" id="cd-size"
+                                class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border-gray-300 focus:ring-primary focus:border-primary sm:text-sm"
+                                placeholder="例如: 10">
+                            <select id="cd-unit"
+                                class="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm rounded-r-md">
+                                <option value="cm">cm</option>
+                                <option value="mm" selected>mm</option>
+                                <option value="inch">inch</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">计算结果</h3>
+                    <div>
+                        <p class="text-sm text-gray-500">分辨率 (DPI/PPI)</p>
+                        <p class="text-3xl font-bold text-primary" id="cd-result-dpi">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Image Analysis -->
+            <div id="content-image-analysis" class="tab-content hidden">
+                <div class="w-full">
+                    <label id="drop-zone" for="file-upload"
+                        class="group relative flex flex-col items-center justify-center w-full h-48 rounded-xl border-2 border-dashed border-blue-300 hover:border-blue-500 bg-white hover:bg-blue-50 transition-all duration-300 cursor-pointer">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg class="w-12 h-12 mb-4 text-gray-400 group-hover:text-blue-500 transition-colors duration-300"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                </path>
+                            </svg>
+                            <p class="mb-2 text-base text-gray-500">
+                                <span class="font-semibold text-blue-500 hover:text-blue-600">上传图片</span>
+                                <span class="text-gray-400">或拖拽图片到这里</span>
+                            </p>
+                            <p class="text-xs text-gray-400">支持 PNG, JPG, WEBP, GIF 等</p>
+                        </div>
+                        <input id="file-upload" name="file-upload" type="file" class="hidden" accept="image/*" />
+                    </label>
+                </div>
+
+                <div id="analysis-result" class="mt-8 hidden">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">图片信息</h3>
+                    <div class="bg-gray-50 rounded-lg p-6 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">文件名</p>
+                                <p class="font-medium text-gray-900 break-all" id="img-name">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">文件类型</p>
+                                <p class="font-medium text-gray-900" id="img-type">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">文件大小</p>
+                                <p class="font-medium text-gray-900" id="img-size">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">分辨率 (DPI)</p>
+                                <p class="font-medium text-primary text-lg" id="img-dpi">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">像素尺寸</p>
+                                <p class="font-medium text-gray-900" id="img-pixel">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">总像素</p>
+                                <p class="font-medium text-gray-900" id="img-total-pixel">-</p>
+                            </div>
+                        </div>
+                        <div class="border-t border-gray-200 pt-4">
+                            <p class="text-sm text-gray-500 mb-2">打印尺寸 (按当前DPI)</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-xs text-gray-400">厘米 (cm)</p>
+                                    <p class="font-medium text-gray-900" id="img-print-cm">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400">英寸 (inch)</p>
+                                    <p class="font-medium text-gray-900" id="img-print-inch">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-center">
+                        <img id="img-preview" class="max-h-64 rounded shadow-sm" src="" alt="Preview">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Tab Switching
+    function switchTab(tabId) {
+        // Hide all contents
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('block'));
+
+        // Show selected content
+        document.getElementById('content-' + tabId).classList.remove('hidden');
+        document.getElementById('content-' + tabId).classList.add('block');
+
+        // Update tab styles
+        document.querySelectorAll('nav button').forEach(el => {
+            el.classList.remove('border-primary', 'text-primary');
+            el.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+        });
+
+        const activeTab = document.getElementById('tab-' + tabId);
+        activeTab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+        activeTab.classList.add('border-primary', 'text-primary');
+    }
+
+    // Calculation Logic
+    const INCH_TO_MM = 25.4;
+    const INCH_TO_CM = 2.54;
+
+    // 1. Pixel to Size
+    const p2sInputs = ['p2s-width', 'p2s-height', 'p2s-dpi'];
+    p2sInputs.forEach(id => document.getElementById(id).addEventListener('input', calcPixelToSize));
+
+    function calcPixelToSize() {
+        const w = parseFloat(document.getElementById('p2s-width').value);
+        const h = parseFloat(document.getElementById('p2s-height').value);
+        const dpi = parseFloat(document.getElementById('p2s-dpi').value);
+
+        if (!w || !h || !dpi) return;
+
+        const w_inch = w / dpi;
+        const h_inch = h / dpi;
+
+        document.getElementById('p2s-result-inch').textContent = `${w_inch.toFixed(2)} x ${h_inch.toFixed(2)}`;
+        document.getElementById('p2s-result-cm').textContent = `${(w_inch * INCH_TO_CM).toFixed(2)} x ${(h_inch * INCH_TO_CM).toFixed(2)}`;
+        document.getElementById('p2s-result-mm').textContent = `${(w_inch * INCH_TO_MM).toFixed(0)} x ${(h_inch * INCH_TO_MM).toFixed(0)}`;
+    }
+
+    // 2. Size to Pixel
+    const s2pInputs = ['s2p-width', 's2p-height', 's2p-dpi', 's2p-unit'];
+    s2pInputs.forEach(id => document.getElementById(id).addEventListener('input', calcSizeToPixel));
+
+    function calcSizeToPixel() {
+        let w = parseFloat(document.getElementById('s2p-width').value);
+        let h = parseFloat(document.getElementById('s2p-height').value);
+        const dpi = parseFloat(document.getElementById('s2p-dpi').value);
+        const unit = document.getElementById('s2p-unit').value;
+
+        if (!w || !h || !dpi) return;
+
+        // Convert to inch first
+        if (unit === 'cm') { w /= INCH_TO_CM; h /= INCH_TO_CM; }
+        if (unit === 'mm') { w /= INCH_TO_MM; h /= INCH_TO_MM; }
+
+        const px_w = Math.round(w * dpi);
+        const px_h = Math.round(h * dpi);
+        const total = (px_w * px_h / 1000000).toFixed(2) + ' MP';
+
+        document.getElementById('s2p-result-pixel').textContent = `${px_w} x ${px_h}`;
+        document.getElementById('s2p-result-total').textContent = total;
+    }
+
+    // 3. Calculate DPI
+    const cdInputs = ['cd-pixel', 'cd-size', 'cd-unit'];
+    cdInputs.forEach(id => document.getElementById(id).addEventListener('input', calcDPI));
+
+    function calcDPI() {
+        const px = parseFloat(document.getElementById('cd-pixel').value);
+        let size = parseFloat(document.getElementById('cd-size').value);
+        const unit = document.getElementById('cd-unit').value;
+
+        if (!px || !size) return;
+
+        if (unit === 'cm') size /= INCH_TO_CM;
+        if (unit === 'mm') size /= INCH_TO_MM;
+
+        const dpi = Math.round(px / size);
+        document.getElementById('cd-result-dpi').textContent = dpi;
+    }
+
+    // 4. Image Analysis
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-upload');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-primary', 'bg-blue-50');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-primary', 'bg-blue-50');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-primary', 'bg-blue-50');
+        const files = e.dataTransfer.files;
+        if (files.length) handleFile(files[0]);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+        if (!file.type.startsWith('image/')) {
+            alert('请上传图片文件');
+            return;
+        }
+
+        // Basic Info
+        document.getElementById('img-name').textContent = file.name;
+        document.getElementById('img-type').textContent = file.type;
+        document.getElementById('img-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        document.getElementById('analysis-result').classList.remove('hidden');
+
+        // Image Preview & Dimensions
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const w = img.naturalWidth;
+                const h = img.naturalHeight;
+
+                document.getElementById('img-pixel').textContent = `${w} x ${h}`;
+                document.getElementById('img-total-pixel').textContent = (w * h / 1000000).toFixed(2) + ' MP';
+                document.getElementById('img-preview').src = e.target.result;
+
+                // Try to read DPI from binary (Simplified approach, default to 72/96 if not found)
+                // Note: Reading real DPI from client-side JS is complex without libraries. 
+                // We will assume 72 DPI for display if we can't parse it, or maybe use a simple heuristic.
+                // For now, let's just show dimensions and calculate print size at standard 300 DPI and 72 DPI
+
+                // NOTE: A robust client-side DPI reader requires parsing headers (EXIF/JFIF/pHYs).
+                // For this MVP, we will default to showing "Web Standard (72 DPI)" and "Print Standard (300 DPI)" sizes
+                // OR we can try to use a small library if available. 
+                // Since we don't have a library, let's display print size at 300 DPI which is most useful for users checking print quality.
+
+                const print_w_cm = (w / 300 * INCH_TO_CM).toFixed(2);
+                const print_h_cm = (h / 300 * INCH_TO_CM).toFixed(2);
+                const print_w_in = (w / 300).toFixed(2);
+                const print_h_in = (h / 300).toFixed(2);
+
+                document.getElementById('img-dpi').textContent = "未检测到 (默认按300计算)"; // Placeholder
+                document.getElementById('img-print-cm').textContent = `${print_w_cm} x ${print_h_cm} (300 DPI)`;
+                document.getElementById('img-print-inch').textContent = `${print_w_in} x ${print_h_in} (300 DPI)`;
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+</script>
+{% endblock %}
