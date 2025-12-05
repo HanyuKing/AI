@@ -38,6 +38,7 @@ async def sitemap():
         "/tools/password",
         "/tools/diff",
         "/tools/svg-converter",
+        "/tools/pixel-converter",
         "/feedback"
     ]
     

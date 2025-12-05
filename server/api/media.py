@@ -434,3 +434,5 @@ async def render_id_photo(
         if os.path.exists(output_path):
             cleanup_files(output_path)
         raise HTTPException(status_code=500, detail=str(e))
+
+
