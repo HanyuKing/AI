@@ -16,3 +16,4 @@ reportlab
 scour
 pdf2image
 rembg
+httpx
