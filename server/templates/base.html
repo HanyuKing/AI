@@ -183,6 +183,9 @@
     </footer>
 
     <script>
+
+        let bingWallpaperUrl = '';
+
         // Fetch and set Bing Wallpaper
         async function initWallpaper() {
             try {
@@ -190,6 +193,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.url) {
+                        bingWallpaperUrl = data.url;
                         const bg = document.getElementById('bing-bg');
                         bg.style.backgroundImage = `url('${data.url}')`;
 
@@ -205,8 +209,29 @@
             }
         }
 
-        function downloadWallpaper() {
-            window.location.href = '/api/general/bing/download';
+        async function downloadWallpaper() {
+            if (!bingWallpaperUrl) return;
+
+            try {
+                // Try fetching as blob to force download filename
+                // Note: This might fail if Bing doesn't allow CORS for the image
+                const response = await fetch(bingWallpaperUrl);
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'bing_wallpaper.jpg';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (e) {
+                // Fallback: Open in new tab if CORS prevents blob access
+                console.warn("Download failed (likely CORS), opening image directly", e);
+                window.open(bingWallpaperUrl, '_blank');
+            }
         }
 
         // Initialize

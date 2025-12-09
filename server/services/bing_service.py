@@ -59,22 +59,6 @@ class BingService:
             "title": ""
         }
 
-    async def download_wallpaper(self) -> Optional[bytes]:
-        """
-        Download the current wallpaper image content.
-        """
-        info = await self.get_wallpaper()
-        url = info.get("url")
-        if not url:
-            return None
-            
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, timeout=10.0)
-                if response.status_code == 200:
-                    return response.content
-        except Exception as e:
-            print(f"Error downloading wallpaper: {e}")
-            return None
+
 
 bing_service = BingService()
