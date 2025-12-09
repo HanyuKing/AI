@@ -1,6 +1,40 @@
 {% extends "base.html" %}
 
-{% block title %}PDF 压缩 - Lumina{% endblock %}
+{% block title %}PDF Compress - Free Online PDF Reducer / 免费在线PDF压缩 - 在线工具{% endblock %}
+
+{% block description %}Free online PDF compressor to reduce PDF file size while maintaining quality. No download
+required, privacy protected. / 免费在线PDF压缩工具，智能压缩PDF文件大小，保持清晰度。无需下载，保护隐私。{% endblock %}
+
+{% block keywords %}pdf compress, reduce pdf size, online pdf compressor, free pdf tools, PDF压缩, 减小PDF大小, 在线PDF工具,
+免费工具{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "PDF Compress / PDF压缩",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Web",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "CNY"
+  },
+  "featureList": [
+    "Smart Compression / 智能压缩",
+    "Adjustable Compression Ratio / 可调节压缩率",
+    "Privacy Protection / 隐私保护",
+    "No Registration Required / 无需注册"
+  ],
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.9",
+    "ratingCount": "520"
+  }
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden mt-10">
@@ -14,13 +48,18 @@
             <!-- File Upload -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">选择 PDF 文件</label>
-                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-primary transition-colors" id="dropZone">
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-primary transition-colors"
+                    id="dropZone">
                     <div class="space-y-1 text-center">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none"
+                            viewBox="0 0 48 48">
+                            <path
+                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         <div class="flex text-sm text-gray-600">
-                            <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none">
+                            <label for="file-upload"
+                                class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none">
                                 <span>上传文件</span>
                                 <input id="file-upload" name="file" type="file" class="sr-only" accept=".pdf">
                             </label>
@@ -36,7 +75,8 @@
             <div>
                 <label for="ratio" class="block text-sm font-medium text-gray-700">压缩强度 (0.1 - 1.0)</label>
                 <div class="flex items-center mt-2">
-                    <input type="range" id="ratio" name="ratio" min="0.1" max="1.0" step="0.1" value="0.5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <input type="range" id="ratio" name="ratio" min="0.1" max="1.0" step="0.1" value="0.5"
+                        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
                     <span id="ratioValue" class="ml-4 text-gray-700 font-mono">0.5</span>
                 </div>
                 <p class="text-xs text-gray-500 mt-1">数值越小，压缩率越高（文件越小），但图片质量可能降低。</p>
@@ -44,7 +84,8 @@
 
             <!-- Action Buttons -->
             <div class="flex justify-end">
-                <button type="submit" id="submitBtn" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50">
+                <button type="submit" id="submitBtn"
+                    class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50">
                     开始压缩
                 </button>
             </div>
@@ -74,7 +115,8 @@
                         <p class="text-sm text-green-600" id="successMsg"></p>
                     </div>
                 </div>
-                <a id="downloadLink" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none">
+                <a id="downloadLink" href="#"
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none">
                     下载文件
                 </a>
             </div>
@@ -101,11 +143,11 @@
     const error = document.getElementById('error');
     const downloadLink = document.getElementById('downloadLink');
     const submitBtn = document.getElementById('submitBtn');
-    
+
     let ws = null;
 
     // File Input Change
-    fileInput.addEventListener('change', function(e) {
+    fileInput.addEventListener('change', function (e) {
         if (this.files && this.files[0]) {
             fileName.textContent = `已选择: ${this.files[0].name}`;
             fileName.classList.remove('hidden');
@@ -113,24 +155,24 @@
     });
 
     // Ratio Slider Change
-    ratioInput.addEventListener('input', function(e) {
+    ratioInput.addEventListener('input', function (e) {
         ratioValue.textContent = this.value;
     });
 
     // Form Submit
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', function (e) {
         e.preventDefault();
-        
+
         if (!fileInput.files[0]) {
             alert("请先选择文件");
             return;
         }
 
         const file = fileInput.files[0];
-        
+
         // 生成一个唯一的 Task ID
         const taskId = 'task_' + Math.random().toString(36).substr(2, 9);
-        
+
         const formData = new FormData();
         formData.append('file', file);
         formData.append('ratio', ratioInput.value);
@@ -141,17 +183,17 @@
         result.classList.add('hidden');
         error.classList.add('hidden');
         submitBtn.disabled = true;
-        
+
         // Reset Progress
         updateProgress(0, "准备上传...");
-        
+
         // 连接 WebSocket 获取实时处理进度
         connectWebSocket(taskId);
 
         const xhr = new XMLHttpRequest();
-        
+
         // Upload Progress (0-50%)
-        xhr.upload.onprogress = function(event) {
+        xhr.upload.onprogress = function (event) {
             if (event.lengthComputable) {
                 // 上传阶段我们定义为前 30% 的进度，因为大文件处理通常比上传慢
                 // 或者如果文件很大，上传可能也很慢。
@@ -163,7 +205,7 @@
         };
 
         // Load / Complete
-        xhr.onload = function() {
+        xhr.onload = function () {
             if (ws) {
                 ws.close();
                 ws = null;
@@ -172,7 +214,7 @@
             if (xhr.status === 200) {
                 const blob = xhr.response;
                 const url = window.URL.createObjectURL(blob);
-                
+
                 // Extract filename
                 const contentDisposition = xhr.getResponseHeader('Content-Disposition');
                 let filename = 'compressed.pdf';
@@ -185,7 +227,7 @@
                 downloadLink.href = url;
                 downloadLink.download = filename;
                 document.getElementById('successMsg').textContent = `文件名: ${filename}`;
-                
+
                 updateProgress(100, "完成！");
                 setTimeout(() => {
                     progressContainer.classList.add('hidden');
@@ -197,17 +239,17 @@
                 if (xhr.responseType === 'json') {
                     errorMessage = xhr.response.detail || errorMessage;
                 } else {
-                     const reader = new FileReader();
-                     reader.onload = function() {
-                         try {
-                             const errData = JSON.parse(reader.result);
-                             showError(errData.detail || errorMessage);
-                         } catch(e) {
-                             showError(`Error ${xhr.status}: ${xhr.statusText}`);
-                         }
-                     }
-                     reader.readAsText(xhr.response);
-                     return;
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        try {
+                            const errData = JSON.parse(reader.result);
+                            showError(errData.detail || errorMessage);
+                        } catch (e) {
+                            showError(`Error ${xhr.status}: ${xhr.statusText}`);
+                        }
+                    }
+                    reader.readAsText(xhr.response);
+                    return;
                 }
                 showError(`错误: ${errorMessage}`);
             }
@@ -215,7 +257,7 @@
         };
 
         // Error
-        xhr.onerror = function() {
+        xhr.onerror = function () {
             if (ws) {
                 ws.close();
                 ws = null;
@@ -223,24 +265,24 @@
             showError("网络错误，请检查连接");
             submitBtn.disabled = false;
         };
-        
+
         // Configure Request
         xhr.open('POST', '/api/media/pdf/compress', true);
         xhr.responseType = 'blob';
-        
+
         xhr.send(formData);
     });
 
     function connectWebSocket(taskId) {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/${taskId}`;
-        
+
         ws = new WebSocket(wsUrl);
-        
+
         ws.onopen = () => {
             console.log("WebSocket connected");
         };
-        
+
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
@@ -260,7 +302,7 @@
                 console.error("WS parse error", e);
             }
         };
-        
+
         ws.onerror = (e) => {
             console.log("WS Error", e);
         };

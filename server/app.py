@@ -109,6 +109,50 @@ async def tool_id_photo(request: Request):
 async def tool_pixel_converter(request: Request):
     return templates.TemplateResponse("tools/pixel_converter.html", {"request": request})
 
+@app.get("/sitemap.xml", response_class=HTMLResponse)
+async def sitemap(request: Request):
+    base_url = str(request.base_url).rstrip("/")
+    urls = [
+        {"loc": f"{base_url}/", "changefreq": "daily", "priority": "1.0"},
+        {"loc": f"{base_url}/tools/pdf-compress", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/image-convert", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/json", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/base64", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/uuid", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/timestamp", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/qrcode", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/image-edit", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/base-convert", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/url-encoder", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/password", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/diff", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/svg-converter", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/id-photo", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/pixel-converter", "changefreq": "weekly", "priority": "0.8"},
+    ]
+    
+    xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+"""
+    for url in urls:
+        xml_content += f"""    <url>
+        <loc>{url['loc']}</loc>
+        <changefreq>{url['changefreq']}</changefreq>
+        <priority>{url['priority']}</priority>
+    </url>
+"""
+    xml_content += "</urlset>"
+    return HTMLResponse(content=xml_content, media_type="application/xml")
+
+@app.get("/robots.txt", response_class=HTMLResponse)
+async def robots(request: Request):
+    base_url = str(request.base_url).rstrip("/")
+    content = f"""User-agent: *
+Allow: /
+Sitemap: {base_url}/sitemap.xml
+"""
+    return HTMLResponse(content=content, media_type="text/plain")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server.app:app", host="0.0.0.0", port=8000, reload=True)

@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- SEO Meta Tags -->
-    <title>{% block title %}MediaToolbox - Free Online Tools / 免费在线工具箱{% endblock %}</title>
+    <title>{% block title %}在线工具 - Free Online Tools / 免费在线工具箱{% endblock %}</title>
     <meta name="description"
-        content="{% block description %}MediaToolbox provides free online tools including ID photo maker, PDF compressor, image converter, and QR code generator. No download required, privacy protected. / MediaToolbox 提供免费在线证件照制作、PDF压缩、格式转换、二维码生成等实用工具。无需下载，保护隐私，高效便捷。{% endblock %}">
+        content="{% block description %}在线工具 provides free online tools including ID photo maker, PDF compressor, image converter, and QR code generator. No download required, privacy protected. / 在线工具 提供免费在线证件照制作、PDF压缩、格式转换、二维码生成等实用工具。无需下载，保护隐私，高效便捷。{% endblock %}">
     <meta name="keywords"
-        content="{% block keywords %}online tools, id photo maker, pdf compressor, image converter, qr code generator, free tools, 在线工具, 证件照制作, PDF压缩, 图片转换, 二维码生成, 免费工具箱, MediaToolbox{% endblock %}">
-    <meta name="author" content="MediaToolbox Team">
+        content="{% block keywords %}online tools, id photo maker, pdf compressor, image converter, qr code generator, free tools, 在线工具, 证件照制作, PDF压缩, 图片转换, 二维码生成, 免费工具箱, 在线工具{% endblock %}">
+    <meta name="author" content="在线工具 Team">
     <meta name="robots" content="index, follow">
 
     <!-- Canonical URL -->
@@ -22,7 +22,7 @@
     <meta property="og:url" content="https://mediatoolbox.com{{ request.url.path }}">
     <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
-    <meta property="og:image" content="https://mediatoolbox.com/static/og-image.png">
+    <meta property="og:image" content="https://mediatoolbox.com/static/icon.png">
     <meta property="og:locale" content="zh_CN">
     <meta property="og:locale:alternate" content="en_US">
 
@@ -32,7 +32,7 @@
     <meta property="twitter:title" content="{% block twitter_title %}{{ self.title() }}{% endblock %}">
     <meta property="twitter:description"
         content="{% block twitter_description %}{{ self.description() }}{% endblock %}">
-    <meta property="twitter:image" content="https://mediatoolbox.com/static/og-image.png">
+    <meta property="twitter:image" content="https://mediatoolbox.com/static/icon.png">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/icon.png">
@@ -59,8 +59,8 @@
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "name": "MediaToolbox",
-      "alternateName": ["MediaToolbox Online Tools", "MediaToolbox 在线工具箱"],
+      "name": "在线工具",
+      "alternateName": ["在线工具 Online Tools", "在线工具箱"],
       "url": "https://mediatoolbox.com",
       "potentialAction": {
         "@type": "SearchAction",
@@ -69,6 +69,7 @@
       }
     }
     </script>
+    {% block structured_data %}{% endblock %}
 
     <style>
         .tool-card:hover {
@@ -105,7 +106,7 @@
                         <path d="M12 10l3-1.5-3-1.5-3 1.5z" fill="url(#gradCyanHeader)" stroke="none" />
                         <path d="M12 10l3-1.5-3-1.5-3 1.5z" fill="#22D3EE" filter="blur(2px)" opacity="0.5" />
                     </svg>
-                    <span class="ml-2 text-xl font-bold text-gray-900">MediaToolbox</span>
+                    <span class="ml-2 text-xl font-bold text-gray-900">在线工具</span>
                 </div>
                 <nav class="flex space-x-4 items-center">
                     <a href="/"
@@ -133,7 +134,7 @@
     <footer class="bg-white border-t border-gray-200 mt-auto">
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <p class="text-center text-gray-500 text-sm">
-                © 2023 MediaToolbox. All rights reserved.
+                © 2023 在线工具. All rights reserved.
             </p>
         </div>
     </footer>

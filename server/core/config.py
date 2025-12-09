@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 class Settings:
-    PROJECT_NAME: str = "MediaToolbox"
+    PROJECT_NAME: str = "在线工具"
     VERSION: str = "1.0.0"
     
     # Base Paths
