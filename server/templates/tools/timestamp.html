@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="max-w-3xl mx-auto mt-10">
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden p-6">
+    <div class="glass shadow-lg rounded-lg overflow-hidden p-6">
         <h2 class="text-xl font-bold text-gray-800 mb-6">时间戳转换工具</h2>
 
         <!-- Current Time -->
@@ -14,7 +14,11 @@
                 <div id="now-ts" class="text-2xl font-mono text-blue-900 mt-1">Loading...</div>
             </div>
             <button onclick="refreshNow()" class="text-blue-500 hover:text-blue-700">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    </path>
+                </svg>
             </button>
         </div>
 
@@ -24,13 +28,18 @@
             <div class="border-r border-gray-200 pr-4">
                 <h3 class="font-medium text-gray-700 mb-3">时间戳 -> 日期</h3>
                 <div class="flex space-x-2 mb-4">
-                    <input type="text" id="input-ts" placeholder="Unix Timestamp" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-primary focus:border-primary">
-                    <button onclick="convertTs()" class="bg-indigo-600 text-white px-4 rounded hover:bg-indigo-700">转换</button>
+                    <input type="text" id="input-ts" placeholder="Unix Timestamp"
+                        class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-primary focus:border-primary">
+                    <button onclick="convertTs()"
+                        class="bg-indigo-600 text-white px-4 rounded hover:bg-indigo-700">转换</button>
                 </div>
                 <div class="space-y-2 text-sm">
-                    <div class="flex justify-between"><span class="text-gray-500">本地时间:</span> <span id="res-local" class="font-mono text-gray-800">-</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">UTC/GMT:</span> <span id="res-utc" class="font-mono text-gray-800">-</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">ISO 8601:</span> <span id="res-iso" class="font-mono text-gray-800">-</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">本地时间:</span> <span id="res-local"
+                            class="font-mono text-gray-800">-</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">UTC/GMT:</span> <span id="res-utc"
+                            class="font-mono text-gray-800">-</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">ISO 8601:</span> <span id="res-iso"
+                            class="font-mono text-gray-800">-</span></div>
                 </div>
             </div>
 
@@ -38,12 +47,16 @@
             <div class="pl-4">
                 <h3 class="font-medium text-gray-700 mb-3">日期 -> 时间戳</h3>
                 <div class="flex space-x-2 mb-4">
-                    <input type="datetime-local" id="input-date" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-primary focus:border-primary">
-                    <button onclick="convertDate()" class="bg-green-600 text-white px-4 rounded hover:bg-green-700">转换</button>
+                    <input type="datetime-local" id="input-date"
+                        class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-primary focus:border-primary">
+                    <button onclick="convertDate()"
+                        class="bg-green-600 text-white px-4 rounded hover:bg-green-700">转换</button>
                 </div>
-                 <div class="space-y-2 text-sm">
-                    <div class="flex justify-between"><span class="text-gray-500">秒 (Seconds):</span> <span id="res-ts-sec" class="font-mono text-gray-800">-</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">毫秒 (Millis):</span> <span id="res-ts-ms" class="font-mono text-gray-800">-</span></div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between"><span class="text-gray-500">秒 (Seconds):</span> <span
+                            id="res-ts-sec" class="font-mono text-gray-800">-</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">毫秒 (Millis):</span> <span
+                            id="res-ts-ms" class="font-mono text-gray-800">-</span></div>
                 </div>
             </div>
         </div>
@@ -55,7 +68,7 @@
     setInterval(() => {
         document.getElementById('now-ts').textContent = Math.floor(Date.now() / 1000);
     }, 1000);
-    
+
     function refreshNow() {
         document.getElementById('now-ts').textContent = Math.floor(Date.now() / 1000);
     }
@@ -84,14 +97,13 @@
     function convertDate() {
         const val = document.getElementById('input-date').value;
         if (!val) return;
-        
+
         const date = new Date(val);
         const ms = date.getTime();
         const sec = Math.floor(ms / 1000);
-        
+
         document.getElementById('res-ts-sec').textContent = sec;
         document.getElementById('res-ts-ms').textContent = ms;
     }
 </script>
 {% endblock %}
-

@@ -1,8 +1,27 @@
 from fastapi import APIRouter, HTTPException, Response
 from server.schemas.feedback import FeedbackRequest
 from server.services.feedback_service import feedback_service
+from server.services.bing_service import bing_service
 
 router = APIRouter()
+
+@router.get("/bing/wallpaper")
+async def get_bing_wallpaper():
+    """Get Bing daily wallpaper metadata"""
+    return await bing_service.get_wallpaper()
+
+@router.get("/bing/download")
+async def download_bing_wallpaper():
+    """Download Bing daily wallpaper"""
+    content = await bing_service.download_wallpaper()
+    if not content:
+        raise HTTPException(status_code=404, detail="Wallpaper not found")
+        
+    return Response(
+        content=content, 
+        media_type="image/jpeg",
+        headers={"Content-Disposition": "attachment; filename=bing_wallpaper.jpg"}
+    )
 
 @router.post("/feedback")
 async def submit_feedback(request: FeedbackRequest):

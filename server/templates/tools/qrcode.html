@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="max-w-3xl mx-auto mt-10">
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden p-6">
+    <div class="glass shadow-lg rounded-lg overflow-hidden p-6">
         <h2 class="text-xl font-bold text-gray-800 mb-6">二维码生成器</h2>
 
         <div class="flex flex-col md:flex-row gap-8">
@@ -12,30 +12,36 @@
             <div class="w-full md:w-1/2 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">内容 (文本或链接)</label>
-                    <textarea id="qrText" class="w-full h-32 p-3 border border-gray-300 rounded-md focus:ring-primary focus:border-primary resize-none" placeholder="https://example.com"></textarea>
+                    <textarea id="qrText"
+                        class="w-full h-32 p-3 border border-gray-300 rounded-md focus:ring-primary focus:border-primary resize-none"
+                        placeholder="https://example.com"></textarea>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">前景色</label>
-                        <input type="color" id="fillColor" value="#000000" class="h-10 w-full border-gray-300 rounded cursor-pointer">
+                        <input type="color" id="fillColor" value="#000000"
+                            class="h-10 w-full border-gray-300 rounded cursor-pointer">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">背景色</label>
-                        <input type="color" id="backColor" value="#ffffff" class="h-10 w-full border-gray-300 rounded cursor-pointer">
+                        <input type="color" id="backColor" value="#ffffff"
+                            class="h-10 w-full border-gray-300 rounded cursor-pointer">
                     </div>
                 </div>
 
-                <button onclick="generateQr()" class="w-full py-2 bg-primary text-white rounded-md hover:bg-blue-600 font-medium">
+                <button onclick="generateQr()"
+                    class="w-full py-2 bg-primary text-white rounded-md hover:bg-blue-600 font-medium">
                     生成二维码
                 </button>
             </div>
 
             <!-- Output -->
-            <div class="w-full md:w-1/2 flex flex-col items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300 p-4">
+            <div
+                class="w-full md:w-1/2 flex flex-col items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300 p-4">
                 <div id="placeholder" class="text-gray-400 text-sm">二维码将显示在这里</div>
                 <img id="qrImage" class="hidden max-w-full h-auto border border-gray-200 shadow-sm">
-                
+
                 <a id="downloadLink" href="#" class="hidden mt-4 text-primary text-sm font-medium hover:underline">
                     下载图片
                 </a>
@@ -59,7 +65,7 @@
             const response = await fetch('/api/utils/qrcode', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     text: text,
                     fill_color: fillColor,
                     back_color: backColor
@@ -69,7 +75,7 @@
             if (response.ok) {
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
-                
+
                 const img = document.getElementById('qrImage');
                 const placeholder = document.getElementById('placeholder');
                 const dlLink = document.getElementById('downloadLink');
@@ -77,7 +83,7 @@
                 img.src = url;
                 img.classList.remove('hidden');
                 placeholder.classList.add('hidden');
-                
+
                 dlLink.href = url;
                 dlLink.download = "qrcode.png";
                 dlLink.classList.remove('hidden');
@@ -88,4 +94,3 @@
     }
 </script>
 {% endblock %}
-

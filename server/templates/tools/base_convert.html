@@ -4,37 +4,46 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto mt-10">
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden p-6">
+    <div class="glass shadow-lg rounded-lg overflow-hidden p-6">
         <h2 class="text-xl font-bold text-gray-800 mb-6">进制转换</h2>
 
         <div class="space-y-6">
             <!-- Binary -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">二进制 (Binary)</label>
-                <input type="text" id="binInput" class="w-full p-3 font-mono border border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="010101">
+                <input type="text" id="binInput"
+                    class="w-full p-3 font-mono border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="010101">
             </div>
 
             <!-- Octal -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">八进制 (Octal)</label>
-                <input type="text" id="octInput" class="w-full p-3 font-mono border border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="52">
+                <input type="text" id="octInput"
+                    class="w-full p-3 font-mono border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="52">
             </div>
 
             <!-- Decimal -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">十进制 (Decimal)</label>
-                <input type="text" id="decInput" class="w-full p-3 font-mono border border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="42">
+                <input type="text" id="decInput"
+                    class="w-full p-3 font-mono border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="42">
             </div>
 
             <!-- Hexadecimal -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">十六进制 (Hexadecimal)</label>
-                <input type="text" id="hexInput" class="w-full p-3 font-mono border border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="2A">
+                <input type="text" id="hexInput"
+                    class="w-full p-3 font-mono border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="2A">
             </div>
         </div>
-        
+
         <div class="mt-6 text-right">
-            <button onclick="clearInputs()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">清空</button>
+            <button onclick="clearInputs()"
+                class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">清空</button>
         </div>
     </div>
 </div>
@@ -57,18 +66,18 @@
         try {
             // Convert input to all other bases
             const targets = [2, 8, 10, 16].filter(b => b !== fromBase);
-            
+
             for (let toBase of targets) {
                 const response = await fetch('/api/dev/base-convert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        value: value, 
-                        from_base: fromBase, 
-                        to_base: toBase 
+                    body: JSON.stringify({
+                        value: value,
+                        from_base: fromBase,
+                        to_base: toBase
                     })
                 });
-                
+
                 const data = await response.json();
                 if (data.success && data.data !== "Invalid input") {
                     inputs[toBase].value = data.data;
@@ -85,7 +94,7 @@
     // Debounce function to avoid too many requests
     function debounce(func, wait) {
         let timeout;
-        return function(...args) {
+        return function (...args) {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(this, args), wait);
         };
@@ -101,4 +110,3 @@
     }
 </script>
 {% endblock %}
-

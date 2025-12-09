@@ -11,11 +11,13 @@
 <style>
     /* 全局容器 */
     .diff-container {
-        height: calc(100vh - 120px); /* 适配高度 */
+        height: calc(100vh - 120px);
+        /* 适配高度 */
         background: #fff;
-        position: relative; /* Ensure relative positioning for children */
+        position: relative;
+        /* Ensure relative positioning for children */
     }
-    
+
     /* Toolbar */
     .diff-toolbar {
         padding: 10px 20px;
@@ -33,71 +35,85 @@
         font-size: 14px;
         line-height: 1.5;
     }
-    
+
     /* 修复：确保 Merge View 填满容器且不溢出 */
     .CodeMirror-merge {
         position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         height: 100%;
         border: none;
-        overflow: hidden; 
+        overflow: hidden;
     }
-    
+
     /* 确保面板占满高度 */
     .CodeMirror-merge-pane {
         height: 100%;
     }
-    
+
     /* 编辑器内部 */
     .CodeMirror-merge .CodeMirror {
         height: 100%;
     }
-    
+
     /* 调整 Merge View 的 gap 样式 */
     .CodeMirror-merge-gap {
         border-color: #ddd;
         background-color: #f9f9f9;
     }
-    
+
     /* 差异颜色加深 - 新增 (绿色) */
     .CodeMirror-merge-r-inserted {
         background-image: none;
-        background-color: #bef5cb; /* 更深的绿色 */
+        background-color: #bef5cb;
+        /* 更深的绿色 */
     }
-    
+
     /* 差异颜色加深 - 删除 (红色) */
     .CodeMirror-merge-r-deleted {
         background-image: none;
-        background-color: #fdaeb7; /* 更深的红色 */
+        background-color: #fdaeb7;
+        /* 更深的红色 */
     }
-    
+
     /* 确保滚动条区域是可滚动的 */
     .CodeMirror-scroll {
-        overflow-y: scroll !important; 
+        overflow-y: scroll !important;
         overflow-x: auto !important;
-        height: 100%; /* 必须占满父容器 */
+        height: 100%;
+        /* 必须占满父容器 */
     }
-    
+
     /* 隐藏原来的 header */
-    .d2h-file-header { display: none; }
+    .d2h-file-header {
+        display: none;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="max-w-[98%] mx-auto mt-4">
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200">
+    <div class="glass shadow-lg rounded-lg overflow-hidden border border-gray-200">
         <!-- Toolbar -->
         <div class="diff-toolbar">
             <h2 class="text-lg font-bold text-gray-800 flex items-center">
                 <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
                 文本差异对比
             </h2>
-            
+
             <div class="flex items-center space-x-4">
-                <button onclick="clearAll()" class="px-3 py-1.5 bg-red-50 border border-red-200 rounded text-sm font-medium text-red-600 hover:bg-red-100 flex items-center transition-colors">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <button onclick="clearAll()"
+                    class="px-3 py-1.5 bg-red-50 border border-red-200 rounded text-sm font-medium text-red-600 hover:bg-red-100 flex items-center transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                        </path>
+                    </svg>
                     清空
                 </button>
             </div>
@@ -124,37 +140,37 @@
     // 用户需求：不要整行高亮（Line diff），只要差异部分（Char/Word diff）。
     // 之前的 Line diff hack 导致了“整行高亮”不符合预期。
     // 同时用户反馈“下一行错误高亮”。这通常是因为 diff_cleanupSemantic 默认行为有时会合并一些无关的 diff。
-    
+
     if (typeof diff_match_patch !== 'undefined') {
         const originalDiffMain = diff_match_patch.prototype.diff_main;
-        
+
         // 还原 diff_main 为默认行为（即字符级对比），去除之前的 Line-based hack
         // 但为了解决“下一行错误高亮”或“过于细碎”的问题，我们可以调整 cleanup 策略
-        
+
         // 注意：CodeMirror 内部调用 diff_main 后通常不会再调 cleanup，除非我们劫持它。
         // 或者我们可以在这里做一些后处理？
         // 不，diff_main 返回的是 diff 数组。
-        
+
         // 重新定义为默认行为，但加上清理逻辑
-        diff_match_patch.prototype.diff_main = function(text1, text2, checklines, deadline) {
+        diff_match_patch.prototype.diff_main = function (text1, text2, checklines, deadline) {
             // 1. 执行标准 diff (字符级)
             var diffs = originalDiffMain.call(this, text1, text2, checklines, deadline);
-            
+
             // 2. 执行清理，合并细碎差异，使其看起来更像“单词级”或更整洁
             // cleanupSemantic 会尝试将细碎的差异合并成有意义的块
             this.diff_cleanupSemantic(diffs);
-            
+
             // cleanupEfficiency 会进一步简化，可能会导致“下一行”问题？
             // 通常 Semantic 就够了。
             // 如果用户觉得还是不对，可以尝试 diff_cleanupEfficiency(diffs) 替代。
-            
+
             return diffs;
         };
     }
 
-    window.onload = function() {
+    window.onload = function () {
         const target = document.getElementById("mergeView");
-        
+
         // 从 localStorage 获取初始值
         const initialValue = localStorage.getItem('diff_text_b') || "";
         const initialOrig = localStorage.getItem('diff_text_a') || "";
@@ -165,41 +181,41 @@
             orig: initialOrig,      // 左边 (Text A / Original)
             lineNumbers: true,      // 显示行号
             mode: "text/plain",
-            highlightDifferences: true, 
+            highlightDifferences: true,
             connect: "align",
             collapseIdentical: false,
             allowEditingOriginals: true, // 允许编辑左侧
             revertButtons: false, // 不需要还原按钮，我们只做对比
-            inputStyle: "textarea", 
+            inputStyle: "textarea",
             viewportMargin: 10,
         });
 
         // ... (后续代码不变)
 
-        
+
         // ... (后续代码不变)
 
-        
+
         // 强制刷新一下布局
         setTimeout(() => {
             dv.editor().refresh();
-            if(dv.leftOriginal()) dv.leftOriginal().refresh();
+            if (dv.leftOriginal()) dv.leftOriginal().refresh();
         }, 100);
-        
+
         // 监听变化并保存
         // 获取左边编辑器实例
-        const leftEditor = dv.leftOriginal(); 
+        const leftEditor = dv.leftOriginal();
         // 获取右边编辑器实例
         const rightEditor = dv.editor();
 
         if (leftEditor) {
-            leftEditor.on("change", function() {
+            leftEditor.on("change", function () {
                 localStorage.setItem('diff_text_a', leftEditor.getValue());
             });
         }
-        
+
         if (rightEditor) {
-            rightEditor.on("change", function() {
+            rightEditor.on("change", function () {
                 localStorage.setItem('diff_text_b', rightEditor.getValue());
             });
         }
@@ -207,17 +223,17 @@
 
     function clearAll() {
         if (!dv) return;
-        
+
         // 清空编辑器内容
         dv.editor().setValue("");
         if (dv.leftOriginal()) {
             dv.leftOriginal().setValue("");
         }
-        
+
         // 清除缓存
         localStorage.removeItem('diff_text_a');
         localStorage.removeItem('diff_text_b');
-        
+
         // 聚焦
         dv.leftOriginal().focus();
     }

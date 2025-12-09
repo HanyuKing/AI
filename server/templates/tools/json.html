@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto mt-4">
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden flex flex-col" style="height: calc(100vh - 140px);">
+    <div class="glass shadow-lg rounded-lg overflow-hidden flex flex-col" style="height: calc(100vh - 140px);">
         <!-- Header -->
         <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
             <h2 class="text-xl font-bold text-gray-800">JSON 工具</h2>
@@ -17,164 +17,177 @@
                 <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
                     <span class="text-sm font-semibold text-gray-700">输入</span>
                     <div class="flex space-x-2 flex-wrap">
-                        <button onclick="formatInput()" class="px-3 py-1 bg-blue-600 border border-transparent rounded text-xs font-medium text-white hover:bg-blue-700 transition">
+                        <button onclick="formatInput()"
+                            class="px-3 py-1 bg-blue-600 border border-transparent rounded text-xs font-medium text-white hover:bg-blue-700 transition">
                             格式化
                         </button>
-                        <button onclick="compressInput()" class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
+                        <button onclick="compressInput()"
+                            class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
                             压缩
                         </button>
-                        <button onclick="escapeJson()" class="px-3 py-1 bg-purple-600 border border-transparent rounded text-xs font-medium text-white hover:bg-purple-700 transition">
+                        <button onclick="escapeJson()"
+                            class="px-3 py-1 bg-purple-600 border border-transparent rounded text-xs font-medium text-white hover:bg-purple-700 transition">
                             转译
                         </button>
-                        <button onclick="unescapeJson()" class="px-3 py-1 bg-purple-100 border border-purple-300 rounded text-xs font-medium text-purple-700 hover:bg-purple-200 transition">
+                        <button onclick="unescapeJson()"
+                            class="px-3 py-1 bg-purple-100 border border-purple-300 rounded text-xs font-medium text-purple-700 hover:bg-purple-200 transition">
                             去转译
                         </button>
-                        <button onclick="clearAll()" class="px-3 py-1 bg-red-50 border border-red-200 rounded text-xs font-medium text-red-600 hover:bg-red-100 transition">
+                        <button onclick="clearAll()"
+                            class="px-3 py-1 bg-red-50 border border-red-200 rounded text-xs font-medium text-red-600 hover:bg-red-100 transition">
                             清空
                         </button>
                     </div>
                 </div>
                 <div class="flex-grow flex overflow-hidden relative">
-                    <div id="inputLineNumbers" class="bg-gray-50 text-right text-gray-400 text-sm font-mono py-4 pr-3 pl-2 border-r border-gray-200 select-none overflow-hidden" style="min-width: 50px; line-height: 1.5; white-space: pre;">1</div>
-                    <textarea id="inputJson" class="flex-grow w-full py-4 pl-4 pr-4 font-mono text-sm focus:outline-none resize-none overflow-auto" placeholder="在此粘贴 JSON..." style="line-height: 1.5;"></textarea>
+                    <div id="inputLineNumbers"
+                        class="bg-gray-50 text-right text-gray-400 text-sm font-mono py-4 pr-3 pl-2 border-r border-gray-200 select-none overflow-hidden"
+                        style="min-width: 50px; line-height: 1.5; white-space: pre;">1</div>
+                    <textarea id="inputJson"
+                        class="flex-grow w-full py-4 pl-4 pr-4 font-mono text-sm focus:outline-none resize-none overflow-auto"
+                        placeholder="在此粘贴 JSON..." style="line-height: 1.5;"></textarea>
                 </div>
             </div>
-            
+
             <!-- Output -->
             <div class="w-full md:w-1/2 p-0 flex flex-col bg-white">
                 <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
                     <span class="text-sm font-semibold text-gray-700">树形视图</span>
                     <div class="flex space-x-2 items-center">
                         <span id="statusMsg" class="text-green-600 text-xs hidden mr-2">处理成功</span>
-                        <button onclick="expandAll()" class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
+                        <button onclick="expandAll()"
+                            class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
                             全部展开
                         </button>
-                        <button onclick="collapseAll()" class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
+                        <button onclick="collapseAll()"
+                            class="px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-50 text-gray-700 transition">
                             全部折叠
                         </button>
-                        <button onclick="copyFormattedJson()" class="px-3 py-1 bg-green-600 border border-transparent rounded text-xs font-medium text-white hover:bg-green-700 transition">
+                        <button onclick="copyFormattedJson()"
+                            class="px-3 py-1 bg-green-600 border border-transparent rounded text-xs font-medium text-white hover:bg-green-700 transition">
                             复制JSON
                         </button>
                     </div>
                 </div>
-                <div id="outputJson" class="flex-grow w-full py-4 overflow-auto text-sm bg-white" style="font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;"></div>
+                <div id="outputJson" class="flex-grow w-full py-4 overflow-auto text-sm bg-white"
+                    style="font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;"></div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-.json-tree {
-    line-height: 1.5;
-    font-size: 14px;
-    color: #333;
-    display: flex;
-    flex-direction: column;
-}
+    .json-tree {
+        line-height: 1.5;
+        font-size: 14px;
+        color: #333;
+        display: flex;
+        flex-direction: column;
+    }
 
-.json-line {
-    padding: 0;
-    position: relative;
-    transition: background-color 0.1s;
-    white-space: nowrap;
-    display: flex;
-    min-height: 21px;
-}
+    .json-line {
+        padding: 0;
+        position: relative;
+        transition: background-color 0.1s;
+        white-space: nowrap;
+        display: flex;
+        min-height: 21px;
+    }
 
-.json-line:hover {
-    background-color: #f5f5f5;
-}
+    .json-line:hover {
+        background-color: #f5f5f5;
+    }
 
-.json-line-number {
-    min-width: 50px;
-    text-align: right;
-    padding-right: 12px;
-    padding-left: 8px;
-    color: #999;
-    user-select: none;
-    background-color: #fafafa;
-    border-right: 1px solid #e0e0e0;
-    flex-shrink: 0;
-}
+    .json-line-number {
+        min-width: 50px;
+        text-align: right;
+        padding-right: 12px;
+        padding-left: 8px;
+        color: #999;
+        user-select: none;
+        background-color: #fafafa;
+        border-right: 1px solid #e0e0e0;
+        flex-shrink: 0;
+    }
 
-.json-line-content {
-    padding-left: 8px;
-    flex-grow: 1;
-}
+    .json-line-content {
+        padding-left: 8px;
+        flex-grow: 1;
+    }
 
-.json-toggle {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    line-height: 16px;
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
-    color: #888;
-    margin-right: 2px;
-    font-size: 11px;
-    border-radius: 3px;
-    transition: all 0.15s;
-    vertical-align: middle;
-}
+    .json-toggle {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        line-height: 16px;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+        color: #888;
+        margin-right: 2px;
+        font-size: 11px;
+        border-radius: 3px;
+        transition: all 0.15s;
+        vertical-align: middle;
+    }
 
-.json-toggle:hover {
-    background-color: #e0e0e0;
-    color: #444;
-}
+    .json-toggle:hover {
+        background-color: #e0e0e0;
+        color: #444;
+    }
 
-.json-key {
-    color: #92278f;
-    font-weight: 500;
-}
+    .json-key {
+        color: #92278f;
+        font-weight: 500;
+    }
 
-.json-string {
-    color: #c41a16;
-}
+    .json-string {
+        color: #c41a16;
+    }
 
-.json-number {
-    color: #1c00cf;
-}
+    .json-number {
+        color: #1c00cf;
+    }
 
-.json-boolean {
-    color: #0d22ff;
-    font-weight: 600;
-}
+    .json-boolean {
+        color: #0d22ff;
+        font-weight: 600;
+    }
 
-.json-null {
-    color: #999;
-    font-weight: 500;
-}
+    .json-null {
+        color: #999;
+        font-weight: 500;
+    }
 
-.json-bracket {
-    color: #333;
-    font-weight: normal;
-}
+    .json-bracket {
+        color: #333;
+        font-weight: normal;
+    }
 
-.json-collapsed {
-    display: none;
-}
+    .json-collapsed {
+        display: none;
+    }
 
-.json-comma {
-    color: #333;
-    margin-left: -1px;
-}
+    .json-comma {
+        color: #333;
+        margin-left: -1px;
+    }
 
-.json-indent {
-    display: inline-block;
-}
+    .json-indent {
+        display: inline-block;
+    }
 
-.json-summary {
-    color: #aaa;
-    font-style: normal;
-    margin-left: 8px;
-    font-size: 12px;
-}
+    .json-summary {
+        color: #aaa;
+        font-style: normal;
+        margin-left: 8px;
+        font-size: 12px;
+    }
 
-.json-colon {
-    margin: 0 6px 0 2px;
-    color: #333;
-}
+    .json-colon {
+        margin: 0 6px 0 2px;
+        color: #333;
+    }
 </style>
 
 {% endblock %}
@@ -207,31 +220,31 @@
     }
 
     // 同步滚动
-    inputArea.addEventListener('scroll', function() {
+    inputArea.addEventListener('scroll', function () {
         inputLineNumbers.scrollTop = inputArea.scrollTop;
     });
 
     // 实时更新结果
-    inputArea.addEventListener('input', function() {
+    inputArea.addEventListener('input', function () {
         updateInputLineNumbers();
         updateTreeView();
     });
 
     // 支持Tab键缩进
-    inputArea.addEventListener('keydown', function(e) {
+    inputArea.addEventListener('keydown', function (e) {
         if (e.key === 'Tab') {
             e.preventDefault();
-            
+
             const start = this.selectionStart;
             const end = this.selectionEnd;
             const value = this.value;
-            
+
             // 插入Tab（使用4个空格）
             this.value = value.substring(0, start) + '    ' + value.substring(end);
-            
+
             // 恢复光标位置
             this.selectionStart = this.selectionEnd = start + 4;
-            
+
             // 触发更新
             updateTreeView();
         }
@@ -256,7 +269,7 @@
 
     function renderJsonTree() {
         if (!parsedJson) return;
-        
+
         currentLineNumber = 0;
         outputDiv.innerHTML = '<div class="json-tree">' + createJsonTree(parsedJson, 0, 'root') + '</div>';
     }
@@ -264,7 +277,7 @@
     function createJsonTree(obj, level, key, isLast = true) {
         const indent = '&nbsp;'.repeat(level * 4);
         let html = '';
-        
+
         if (obj === null) {
             currentLineNumber++;
             return `<div class="json-line"><span class="json-line-number">${currentLineNumber}</span><span class="json-line-content">${indent}<span class="json-null">null</span></span></div>`;
@@ -277,13 +290,13 @@
             const entries = isArray ? obj : Object.entries(obj);
             const length = isArray ? obj.length : Object.keys(obj).length;
             const isEmpty = length === 0;
-            
+
             const openBracket = isArray ? '[' : '{';
             const closeBracket = isArray ? ']' : '}';
             const summary = getSummary(obj);
-            
+
             const toggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
-            
+
             currentLineNumber++;
             html += `<div class="json-line">`;
             html += `<span class="json-line-number">${currentLineNumber}</span>`;
@@ -304,7 +317,7 @@
 
             if (!isEmpty) {
                 html += `<div id="${toggleId}">`;
-                
+
                 if (isArray) {
                     obj.forEach((item, index) => {
                         const isLastItem = index === obj.length - 1;
@@ -326,7 +339,7 @@
                     keys.forEach((k, index) => {
                         const isLastItem = index === keys.length - 1;
                         const value = obj[k];
-                        
+
                         if (typeof value === 'object' && value !== null) {
                             // 对象或数组值，需要递归处理
                             const isArrayValue = Array.isArray(value);
@@ -336,7 +349,7 @@
                             const innerCloseBracket = isArrayValue ? ']' : '}';
                             const innerSummary = getSummary(value);
                             const innerToggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
-                            
+
                             currentLineNumber++;
                             html += `<div class="json-line">`;
                             html += `<span class="json-line-number">${currentLineNumber}</span>`;
@@ -354,13 +367,13 @@
                                 if (!isLastItem) html += `<span class="json-comma">,</span>`;
                             }
                             html += `</span></div>`;
-                            
+
                             if (!innerIsEmpty) {
                                 html += `<div id="${innerToggleId}">`;
                                 const innerContent = renderInnerContent(value, level + 2);
                                 html += innerContent;
                                 html += `</div>`;
-                                
+
                                 currentLineNumber++;
                                 html += `<div class="json-line">`;
                                 html += `<span class="json-line-number">${currentLineNumber}</span>`;
@@ -378,7 +391,7 @@
                         }
                     });
                 }
-                
+
                 html += `</div>`;
                 currentLineNumber++;
                 html += `<div class="json-line">`;
@@ -401,9 +414,9 @@
         if (value === null) {
             return '<span class="json-null">null</span>';
         }
-        
+
         const type = typeof value;
-        
+
         if (type === 'string') {
             return `<span class="json-string">"${escapeHtml(value)}"</span>`;
         } else if (type === 'number') {
@@ -411,7 +424,7 @@
         } else if (type === 'boolean') {
             return `<span class="json-boolean">${value}</span>`;
         }
-        
+
         return escapeHtml(String(value));
     }
 
@@ -427,7 +440,7 @@
 
     function renderInnerContent(obj, level) {
         let html = '';
-        
+
         if (Array.isArray(obj)) {
             obj.forEach((item, index) => {
                 const isLastItem = index === obj.length - 1;
@@ -449,7 +462,7 @@
             keys.forEach((k, index) => {
                 const isLastItem = index === keys.length - 1;
                 const value = obj[k];
-                
+
                 if (typeof value === 'object' && value !== null) {
                     const isArrayValue = Array.isArray(value);
                     const innerLength = isArrayValue ? value.length : Object.keys(value).length;
@@ -458,7 +471,7 @@
                     const innerCloseBracket = isArrayValue ? ']' : '}';
                     const innerSummary = getSummary(value);
                     const innerToggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
-                    
+
                     currentLineNumber++;
                     html += `<div class="json-line">`;
                     html += `<span class="json-line-number">${currentLineNumber}</span>`;
@@ -476,12 +489,12 @@
                         if (!isLastItem) html += `<span class="json-comma">,</span>`;
                     }
                     html += `</span></div>`;
-                    
+
                     if (!innerIsEmpty) {
                         html += `<div id="${innerToggleId}">`;
                         html += renderInnerContent(value, level + 1);
                         html += `</div>`;
-                        
+
                         currentLineNumber++;
                         html += `<div class="json-line">`;
                         html += `<span class="json-line-number">${currentLineNumber}</span>`;
@@ -499,7 +512,7 @@
                 }
             });
         }
-        
+
         return html;
     }
 
@@ -513,7 +526,7 @@
         const content = document.getElementById(toggleId);
         const summary = document.getElementById(toggleId + '-summary');
         const toggle = content.previousElementSibling.querySelector('.json-toggle');
-        
+
         if (content.style.display === 'none') {
             content.style.display = 'block';
             summary.style.display = 'none';
@@ -608,7 +621,7 @@
         try {
             // 尝试解析转义的字符串
             const unescaped = JSON.parse(content);
-            
+
             // 检查解析后的是否为字符串
             if (typeof unescaped === 'string') {
                 inputArea.value = unescaped;
@@ -630,7 +643,7 @@
         }
 
         const formatted = JSON.stringify(parsedJson, null, 2);
-        
+
         // 使用现代的 Clipboard API
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(formatted).then(() => {
@@ -673,4 +686,3 @@
     updateTreeView();
 </script>
 {% endblock %}
-
