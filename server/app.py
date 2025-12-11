@@ -109,6 +109,11 @@ async def tool_id_photo(request: Request):
 async def tool_pixel_converter(request: Request):
     return templates.TemplateResponse("tools/pixel_converter.html", {"request": request})
 
+@app.get("/tools/base64-to-image", response_class=HTMLResponse)
+async def tool_base64_to_image(request: Request):
+    return templates.TemplateResponse("tools/base64_to_image.html", {"request": request})
+
+
 @app.get("/sitemap.xml", response_class=HTMLResponse)
 async def sitemap(request: Request):
     base_url = str(request.base_url).rstrip("/")
@@ -118,6 +123,7 @@ async def sitemap(request: Request):
         {"loc": f"{base_url}/tools/image-convert", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/json", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/base64", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/base64-to-image", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/uuid", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/timestamp", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/qrcode", "changefreq": "weekly", "priority": "0.8"},

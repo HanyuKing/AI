@@ -436,3 +436,69 @@ async def render_id_photo(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==============================================
+# Base64 转图片端点
+# ==============================================
+
+@router.post("/base64-to-image")
+async def base64_to_image(
+    background_tasks: BackgroundTasks,
+    base64_string: str = Form(...),
+    filename: str = Form("image")
+):
+    """
+    Base64 转图片
+    支持 PNG、JPEG、GIF、WEBP 等格式
+    """
+    import base64
+    import io
+    from PIL import Image
+    
+    try:
+        # 移除可能存在的 Data URL 前缀
+        # 格式: data:image/png;base64,iVBORw0KGgo...
+        if ',' in base64_string and base64_string.startswith('data:'):
+            base64_string = base64_string.split(',', 1)[1]
+        
+        # 移除可能的空白字符
+        base64_string = base64_string.strip()
+        
+        # 解码 Base64
+        image_data = base64.b64decode(base64_string)
+        
+        # 使用 PIL 打开图片以验证和确定格式
+        image = Image.open(io.BytesIO(image_data))
+        image_format = image.format if image.format else 'PNG'
+        
+        # 确定文件扩展名
+        ext_map = {
+            'PNG': '.png',
+            'JPEG': '.jpg',
+            'JPG': '.jpg',
+            'GIF': '.gif',
+            'WEBP': '.webp',
+            'BMP': '.bmp',
+            'TIFF': '.tiff'
+        }
+        ext = ext_map.get(image_format.upper(), '.png')
+        
+        # 保存到临时文件
+        output_filename = f"{filename}{ext}"
+        output_path = str(settings.TEMP_DIR / f"{uuid.uuid4()}_{output_filename}")
+        
+        # 保存图片
+        image.save(output_path)
+        
+        # 返回文件并在后台清理
+        background_tasks.add_task(cleanup_files, output_path)
+        return FileResponse(
+            output_path,
+            filename=output_filename,
+            media_type=f"image/{image_format.lower()}"
+        )
+        
+    except base64.binascii.Error:
+        raise HTTPException(status_code=400, detail="无效的 Base64 编码")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"转换失败: {str(e)}")
+
