@@ -117,6 +117,14 @@ async def tool_base64_to_image(request: Request):
 async def tool_calligraphy(request: Request):
     return templates.TemplateResponse("tools/calligraphy.html", {"request": request})
 
+@app.get("/tools/zitie-new", response_class=HTMLResponse)
+async def tool_zitie_new(request: Request):
+    return templates.TemplateResponse("tools/zitie_new.html", {"request": request})
+
+@app.get("/tools/zitie-new/print", response_class=HTMLResponse)
+async def tool_zitie_new_print(request: Request):
+    return templates.TemplateResponse("tools/zitie_new_print.html", {"request": request})
+
 
 @app.get("/sitemap.xml", response_class=HTMLResponse)
 async def sitemap(request: Request):
@@ -129,6 +137,7 @@ async def sitemap(request: Request):
         {"loc": f"{base_url}/tools/base64", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/base64-to-image", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/calligraphy", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/zitie-new", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/uuid", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/timestamp", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/qrcode", "changefreq": "weekly", "priority": "0.8"},

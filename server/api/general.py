@@ -37,6 +37,7 @@ async def sitemap():
         "/tools/image-convert",
         "/tools/json",
         "/tools/base64",
+        "/tools/zitie-new",
         "/tools/uuid",
         "/tools/timestamp",
         "/tools/qrcode",

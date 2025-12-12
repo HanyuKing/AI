@@ -8,7 +8,6 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 from PIL import Image
-import cairosvg
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPDF, renderPS
 import fitz  # PyMuPDF
@@ -18,6 +17,18 @@ import base64
 
 class SVGService:
     """SVG格式转换服务"""
+
+    @staticmethod
+    def _try_import_cairosvg():
+        """
+        尝试导入 cairosvg。
+        注意：在 macOS 上如果缺少系统 cairo 动态库，导入可能抛出 OSError。
+        """
+        try:
+            import cairosvg  # type: ignore
+            return cairosvg
+        except Exception:
+            return None
     
     # ==============================================
     # 输入格式 → SVG
@@ -247,14 +258,54 @@ class SVGService:
             height: 输出高度（可选）
             dpi: 分辨率
         """
+        # 方案A：优先尝试 cairosvg（效果好、速度快）
+        cairosvg = SVGService._try_import_cairosvg()
+        if cairosvg is not None:
+            try:
+                kwargs = {'dpi': dpi}
+                if width:
+                    kwargs['output_width'] = width
+                if height:
+                    kwargs['output_height'] = height
+
+                cairosvg.svg2png(url=input_path, write_to=output_path, **kwargs)
+                return
+            except Exception:
+                # 继续尝试方案B
+                pass
+
+        # 方案B：svglib + reportlab 生成 PDF，再用 PyMuPDF 渲染为 PNG（不依赖系统 cairo）
         try:
-            kwargs = {'dpi': dpi}
-            if width:
-                kwargs['output_width'] = width
-            if height:
-                kwargs['output_height'] = height
-            
-            cairosvg.svg2png(url=input_path, write_to=output_path, **kwargs)
+            drawing = svg2rlg(input_path)
+            if drawing is None:
+                raise Exception("无法解析SVG文件")
+
+            temp_pdf = tempfile.mktemp(suffix='.pdf')
+            renderPDF.drawToFile(drawing, temp_pdf)
+
+            doc = fitz.open(temp_pdf)
+            page = doc[0]
+
+            # 根据 width/height 缩放（像素维度）
+            if width or height:
+                rect = page.rect
+                sx = (width / rect.width) if width else None
+                sy = (height / rect.height) if height else None
+                scale = sx if sy is None else (sy if sx is None else min(sx, sy))
+                if scale is None or scale <= 0:
+                    scale = 1.0
+                mat = fitz.Matrix(scale, scale)
+            else:
+                # dpi 相对 72dpi 的缩放
+                scale = max(0.1, dpi / 72.0)
+                mat = fitz.Matrix(scale, scale)
+
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            pix.save(output_path)
+
+            doc.close()
+            if os.path.exists(temp_pdf):
+                os.unlink(temp_pdf)
         except Exception as e:
             raise Exception(f"SVG转PNG失败: {str(e)}")
     
@@ -318,6 +369,9 @@ class SVGService:
         except Exception as e:
             # 备选方案：使用cairosvg
             try:
+                cairosvg = SVGService._try_import_cairosvg()
+                if cairosvg is None:
+                    raise Exception("cairosvg不可用（可能缺少系统cairo依赖）")
                 cairosvg.svg2pdf(url=input_path, write_to=output_path)
             except Exception as e2:
                 raise Exception(f"SVG转PDF失败: {str(e)}, 备选方案也失败: {str(e2)}")
@@ -330,6 +384,9 @@ class SVGService:
         """
         try:
             # 尝试使用cairosvg
+            cairosvg = SVGService._try_import_cairosvg()
+            if cairosvg is None:
+                raise Exception("cairosvg不可用（可能缺少系统cairo依赖）")
             cairosvg.svg2ps(url=input_path, write_to=output_path)
         except Exception as e:
             # 备选方案：使用svglib
