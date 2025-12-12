@@ -146,7 +146,13 @@
     .page {
       box-shadow: none !important;
       margin: 0 auto !important;
+      /* 避免最后一页也强制分页导致多出空白第2页 */
+      break-after: page;
       page-break-after: always;
+    }
+    .page:last-child {
+      break-after: auto;
+      page-break-after: auto;
     }
   }
 
@@ -216,7 +222,8 @@
   }
 
   .char {
-    font-size: calc(var(--cell-mm) * 0.72mm);
+    /* 字略小一点，更接近常见字帖比例 */
+    font-size: calc(var(--cell-mm) * 0.68mm);
     line-height: 1;
     color: var(--char-color);
     opacity: var(--char-opacity);
@@ -236,10 +243,12 @@
   }
 
   // ======= 实时渲染（同页预览 + 打印）=======
-  const STANDARD_CELL_MM = 20;
+  // 格子/字体偏大：将常用格宽从 20mm 下调到 18mm
+  const STANDARD_CELL_MM = 18;
+  // 打印内线“几乎看不到”：提高线条可见度（更接近印刷效果）
   const GRID_COLOR_HEX = '#ef4444';
   const GRID_BORDER_OPACITY = 1.0;
-  const GRID_INNER_OPACITY = 0.28;
+  const GRID_INNER_OPACITY = 0.55;
 
   function sanitizeChars(text) {
     return (text || '').split('').filter(c => c && c.trim().length > 0);
@@ -314,8 +323,9 @@
     pattern.setAttribute('height', String(opts.cellMM));
     defs.appendChild(pattern);
 
-    const innerW = 0.20;
-    const diagW = 0.20;
+    // 内线/对角线过细会在打印时被抗锯齿“吃掉”，加粗一点
+    const innerW = 0.32;
+    const diagW = 0.30;
     const half = opts.cellMM / 2;
 
     const addLine = (x1, y1, x2, y2, sw, opacity) => {
@@ -327,6 +337,7 @@
       line.setAttribute('stroke', GRID_COLOR_HEX);
       line.setAttribute('stroke-opacity', String(opacity));
       line.setAttribute('stroke-width', String(sw));
+      line.setAttribute('stroke-linecap', 'square');
       line.setAttribute('vector-effect', 'non-scaling-stroke');
       pattern.appendChild(line);
     };
@@ -350,6 +361,7 @@
       rect.setAttribute('stroke', GRID_COLOR_HEX);
       rect.setAttribute('stroke-opacity', String(GRID_INNER_OPACITY));
       rect.setAttribute('stroke-width', String(innerW));
+      rect.setAttribute('stroke-linecap', 'square');
       rect.setAttribute('stroke-dasharray', '1.2 1.2');
       rect.setAttribute('vector-effect', 'non-scaling-stroke');
       pattern.appendChild(rect);
@@ -366,7 +378,7 @@
     }
 
     // 外框 + 分隔线（只画一次）
-    const strokeW = 0.90;
+    const strokeW = 0.85;
     const halfStroke = strokeW / 2;
     const border = document.createElementNS(NS, 'rect');
     // 向内缩半个线宽，避免 stroke 画到 viewBox 外被裁切导致“边框没了”
@@ -378,6 +390,7 @@
     border.setAttribute('stroke', GRID_COLOR_HEX);
     border.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
     border.setAttribute('stroke-width', String(strokeW));
+    border.setAttribute('stroke-linecap', 'square');
     border.setAttribute('vector-effect', 'non-scaling-stroke');
     svg.appendChild(border);
 
@@ -391,6 +404,7 @@
       line.setAttribute('stroke', GRID_COLOR_HEX);
       line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
       line.setAttribute('stroke-width', String(strokeW));
+      line.setAttribute('stroke-linecap', 'square');
       line.setAttribute('vector-effect', 'non-scaling-stroke');
       svg.appendChild(line);
     }
@@ -404,6 +418,7 @@
       line.setAttribute('stroke', GRID_COLOR_HEX);
       line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
       line.setAttribute('stroke-width', String(strokeW));
+      line.setAttribute('stroke-linecap', 'square');
       line.setAttribute('vector-effect', 'non-scaling-stroke');
       svg.appendChild(line);
     }
