@@ -3,14 +3,32 @@
 {% block title %}字帖生成（新版） - 在线工具{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto mt-10">
+<div class="max-w-6xl mx-auto mt-10 print:hidden">
   <div class="glass shadow-lg rounded-lg overflow-hidden p-6">
-    <div class="flex items-start justify-between gap-4">
-      <div>
+    <div class="flex items-start justify-between gap-6">
+      <div class="min-w-0">
         <h2 class="text-xl font-bold text-gray-800">字帖生成（新版）</h2>
-        <p class="text-sm text-gray-600 mt-1">按“模板 + 年级”一键生成 A4 可打印字帖（纯前端生成，不依赖旧版字帖工具）。</p>
+        <p class="text-sm text-gray-600 mt-1">在当前页面实时预览，直接打印/导出 PDF（不再使用单独“预览页”）。</p>
+        <div class="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+          <button type="button" onclick="window.print()"
+            class="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 shadow-sm transition-colors font-medium">
+            打印 / 导出 PDF
+          </button>
+          <div class="px-3 py-2 bg-white/60 border border-white/50 rounded-md">
+            共 <span id="pageCount" class="font-semibold text-gray-900">1</span> 页
+          </div>
+          <a href="/tools/calligraphy" class="text-primary hover:underline whitespace-nowrap">去旧版字帖 →</a>
+        </div>
       </div>
-      <a href="/tools/calligraphy" class="text-sm text-primary hover:underline whitespace-nowrap">去旧版字帖 →</a>
+
+      <div class="flex items-center gap-4 shrink-0">
+        <div class="text-right">
+          <div class="text-xs text-gray-500 mb-2">扫码打开字帖生成页</div>
+          <div class="w-24 h-24 border border-gray-200 rounded-lg bg-white flex items-center justify-center overflow-hidden">
+            <img id="qrcodeImg" alt="字帖生成页二维码" class="w-full h-full object-contain" />
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="mt-6 grid grid-cols-1 gap-4">
@@ -63,7 +81,7 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">参考字颜色</label>
-          <input type="color" id="zitieCharColor" value="#9CA3AF"
+          <input type="color" id="zitieCharColor" value="#6B7280"
             class="h-10 w-full p-1 border border-gray-300 rounded-md">
         </div>
         <div class="text-sm text-gray-600">
@@ -92,54 +110,457 @@
         </div>
       </div>
 
-      <div class="flex flex-wrap gap-2 pt-2">
-        <button type="button" onclick="openPrint()"
-          class="px-6 py-2 bg-primary text-white rounded-md hover:bg-blue-600 shadow-sm transition-colors font-medium">
-          生成预览（可打印）
-        </button>
-        <button type="button" onclick="openPrint(true)"
-          class="px-6 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-800 shadow-sm transition-colors font-medium">
-          直接打开并打印
-        </button>
-      </div>
-
       <div class="text-xs text-gray-500">
-        <p><strong>提示：</strong>打开预览页后可用浏览器的“打印”功能导出 PDF 或直接打印。</p>
+        <p><strong>提示：</strong>下方为实时预览。点击上方“打印/导出 PDF”即可打印或保存 PDF。</p>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Pages Preview -->
+<div id="pagesRoot" class="w-full flex flex-col items-center gap-8 bg-gray-100 py-8 print:p-0 print:gap-0 print:bg-white">
+</div>
+
+<style>
+  :root {
+    --page-w: 210mm;
+    --page-h: 297mm;
+    --pad: 14mm;
+    --header-h: 14mm;
+    --grid-border-w: 0.90mm;
+    --char-opacity: 0.28;
+  }
+
+  @media print {
+    @page { size: A4; margin: 0; }
+    header, footer, #bing-bg { display: none !important; }
+    main { padding: 0 !important; max-width: none !important; }
+    body { margin: 0; padding: 0; background: #fff !important; }
+    .print\:hidden { display: none !important; }
+    #pagesRoot {
+      display: block !important;
+      padding: 0 !important;
+      background: #fff !important;
+      gap: 0 !important;
+    }
+    .page {
+      box-shadow: none !important;
+      margin: 0 auto !important;
+      page-break-after: always;
+    }
+  }
+
+  .page {
+    width: var(--page-w);
+    height: var(--page-h);
+    background: #fff;
+    box-sizing: border-box;
+    padding: var(--pad);
+    position: relative;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .page-header {
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #111827;
+    margin-bottom: 2mm;
+  }
+
+  .page-title { font-weight: 700; letter-spacing: 0.5px; }
+  .page-fields { color: #374151; white-space: nowrap; }
+
+  .page-footer {
+    position: absolute;
+    bottom: 8mm;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    color: #9ca3af;
+  }
+
+  .sheet {
+    display: grid;
+    gap: 0;
+    align-content: start;
+    justify-content: center;
+    margin: 0 auto;
+    position: relative;
+    background-color: #fff;
+  }
+
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .cell {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: transparent;
+    z-index: 1;
+    width: calc(var(--cell-mm) * 1mm);
+    height: calc(var(--cell-mm) * 1mm);
+  }
+
+  .char {
+    font-size: calc(var(--cell-mm) * 0.72mm);
+    line-height: 1;
+    color: var(--char-color);
+    opacity: var(--char-opacity);
+    user-select: none;
+  }
+
+  .font-kaiti { font-family: "KaiTi", "Kaiti SC", "STKaiti", serif; }
+  .font-songti { font-family: "SimSun", "Songti SC", "STSong", serif; }
+  .font-heiti { font-family: "SimHei", "Heiti SC", "STHeiti", sans-serif; }
+
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+</style>
 
 <script>
   function fillExample(text) {
     document.getElementById('zitieText').value = text;
   }
 
-  function openPrint(autoPrint = false) {
+  // ======= 实时渲染（同页预览 + 打印）=======
+  const STANDARD_CELL_MM = 20;
+  const GRID_COLOR_HEX = '#ef4444';
+  const GRID_BORDER_OPACITY = 1.0;
+  const GRID_INNER_OPACITY = 0.28;
+
+  function sanitizeChars(text) {
+    return (text || '').split('').filter(c => c && c.trim().length > 0);
+  }
+
+  function calcColsRows(cellMM, padMM, headerMM) {
+    const pageW = 210, pageH = 297;
+    const contentW = pageW - padMM * 2;
+    const contentH = pageH - padMM * 2 - headerMM - 2; // 2mm header gap
+    const cols = Math.max(1, Math.floor(contentW / cellMM));
+    const rows = Math.max(1, Math.floor(contentH / cellMM));
+    return { cols, rows };
+  }
+
+  function createPage(opts, pageNo, totalPages) {
+    const page = document.createElement('div');
+    page.className = 'page';
+    page.style.setProperty('--cell-mm', String(opts.cellMM));
+    page.style.setProperty('--char-color', opts.charColor);
+    page.style.setProperty('--char-opacity', String(opts.mode === 'trace' ? 0.18 : 0.28));
+
+    const header = document.createElement('div');
+    header.className = 'page-header';
+    header.innerHTML = `
+      <div class="page-title">字帖练习</div>
+      <div class="page-fields">姓名：__________　日期：____年__月__日</div>
+    `;
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet';
+    sheet.dataset.grid = opts.grid;
+    sheet.style.gridTemplateColumns = `repeat(${opts.cols}, calc(${opts.cellMM} * 1mm))`;
+    sheet.style.gridTemplateRows = `repeat(${opts.rows}, calc(${opts.cellMM} * 1mm))`;
+    sheet.style.gridAutoRows = `calc(${opts.cellMM} * 1mm)`;
+    sheet.style.width = (opts.cols * opts.cellMM) + 'mm';
+    sheet.style.height = (opts.rows * opts.cellMM) + 'mm';
+
+    const overlay = buildGridOverlaySvg(opts);
+    if (overlay) sheet.appendChild(overlay);
+
+    const footer = document.createElement('div');
+    footer.className = 'page-footer';
+    footer.textContent = `第 ${pageNo} 页 / 共 ${totalPages} 页`;
+
+    page.appendChild(header);
+    page.appendChild(sheet);
+    page.appendChild(footer);
+    return { page, sheet };
+  }
+
+  function buildGridOverlaySvg(opts) {
+    if (!opts || !opts.grid || opts.grid === 'none') return null;
+
+    const w = opts.cols * opts.cellMM;
+    const h = opts.rows * opts.cellMM;
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'grid-overlay');
+    svg.setAttribute('width', w + 'mm');
+    svg.setAttribute('height', h + 'mm');
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.setAttribute('shape-rendering', 'crispEdges');
+
+    const defs = document.createElementNS(NS, 'defs');
+    svg.appendChild(defs);
+
+    const patId = `pat-${opts.grid}-${opts.cellMM}`;
+    const pattern = document.createElementNS(NS, 'pattern');
+    pattern.setAttribute('id', patId);
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    pattern.setAttribute('width', String(opts.cellMM));
+    pattern.setAttribute('height', String(opts.cellMM));
+    defs.appendChild(pattern);
+
+    const innerW = 0.20;
+    const diagW = 0.20;
+    const half = opts.cellMM / 2;
+
+    const addLine = (x1, y1, x2, y2, sw, opacity) => {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(x1));
+      line.setAttribute('y1', String(y1));
+      line.setAttribute('x2', String(x2));
+      line.setAttribute('y2', String(y2));
+      line.setAttribute('stroke', GRID_COLOR_HEX);
+      line.setAttribute('stroke-opacity', String(opacity));
+      line.setAttribute('stroke-width', String(sw));
+      line.setAttribute('vector-effect', 'non-scaling-stroke');
+      pattern.appendChild(line);
+    };
+
+    if (opts.grid === 'tian' || opts.grid === 'mizi' || opts.grid === 'huigong') {
+      addLine(half, 0, half, opts.cellMM, innerW, GRID_INNER_OPACITY);
+      addLine(0, half, opts.cellMM, half, innerW, GRID_INNER_OPACITY);
+    }
+    if (opts.grid === 'mizi') {
+      addLine(0, 0, opts.cellMM, opts.cellMM, diagW, GRID_INNER_OPACITY);
+      addLine(opts.cellMM, 0, 0, opts.cellMM, diagW, GRID_INNER_OPACITY);
+    }
+    if (opts.grid === 'huigong') {
+      const inset = opts.cellMM * 0.25;
+      const rect = document.createElementNS(NS, 'rect');
+      rect.setAttribute('x', String(inset));
+      rect.setAttribute('y', String(inset));
+      rect.setAttribute('width', String(opts.cellMM - inset * 2));
+      rect.setAttribute('height', String(opts.cellMM - inset * 2));
+      rect.setAttribute('fill', 'none');
+      rect.setAttribute('stroke', GRID_COLOR_HEX);
+      rect.setAttribute('stroke-opacity', String(GRID_INNER_OPACITY));
+      rect.setAttribute('stroke-width', String(innerW));
+      rect.setAttribute('stroke-dasharray', '1.2 1.2');
+      rect.setAttribute('vector-effect', 'non-scaling-stroke');
+      pattern.appendChild(rect);
+    }
+
+    if (opts.grid !== 'square') {
+      const bg = document.createElementNS(NS, 'rect');
+      bg.setAttribute('x', '0');
+      bg.setAttribute('y', '0');
+      bg.setAttribute('width', String(w));
+      bg.setAttribute('height', String(h));
+      bg.setAttribute('fill', `url(#${patId})`);
+      svg.appendChild(bg);
+    }
+
+    // 外框 + 分隔线（只画一次）
+    const strokeW = 0.90;
+    const halfStroke = strokeW / 2;
+    const border = document.createElementNS(NS, 'rect');
+    // 向内缩半个线宽，避免 stroke 画到 viewBox 外被裁切导致“边框没了”
+    border.setAttribute('x', String(halfStroke));
+    border.setAttribute('y', String(halfStroke));
+    border.setAttribute('width', String(w - strokeW));
+    border.setAttribute('height', String(h - strokeW));
+    border.setAttribute('fill', 'none');
+    border.setAttribute('stroke', GRID_COLOR_HEX);
+    border.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
+    border.setAttribute('stroke-width', String(strokeW));
+    border.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(border);
+
+    for (let i = 1; i < opts.cols; i++) {
+      const x = i * opts.cellMM;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(x));
+      line.setAttribute('y1', String(halfStroke));
+      line.setAttribute('x2', String(x));
+      line.setAttribute('y2', String(h - halfStroke));
+      line.setAttribute('stroke', GRID_COLOR_HEX);
+      line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
+      line.setAttribute('stroke-width', String(strokeW));
+      line.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(line);
+    }
+    for (let j = 1; j < opts.rows; j++) {
+      const y = j * opts.cellMM;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(halfStroke));
+      line.setAttribute('y1', String(y));
+      line.setAttribute('x2', String(w - halfStroke));
+      line.setAttribute('y2', String(y));
+      line.setAttribute('stroke', GRID_COLOR_HEX);
+      line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
+      line.setAttribute('stroke-width', String(strokeW));
+      line.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(line);
+    }
+
+    return svg;
+  }
+
+  function makeCell(opts, chOrEmpty) {
+    const cell = document.createElement('div');
+    cell.className = `cell font-${opts.font}`;
+    if (chOrEmpty) {
+      const span = document.createElement('span');
+      span.className = 'char';
+      span.textContent = chOrEmpty;
+      cell.appendChild(span);
+    }
+    return cell;
+  }
+
+  function computeTotalPages(opts, chars) {
+    if (opts.layout === 'row') {
+      const totalRows = Math.max(1, chars.length || 1);
+      return Math.max(1, Math.ceil(totalRows / opts.rows));
+    }
+    const cellsPerPage = opts.cols * opts.rows;
+    if (chars.length === 0) return 1;
+    if (opts.repeatFill) return Math.max(1, Math.ceil(chars.length / cellsPerPage));
+    return Math.max(1, Math.ceil(chars.length / cellsPerPage));
+  }
+
+  function renderRowLayout(opts, chars, totalPages) {
+    const root = document.getElementById('pagesRoot');
+    root.innerHTML = '';
+
+    const perPageRows = opts.rows;
+    let rowIndex = 0;
+    let pageNo = 1;
+    let pageBundle = createPage(opts, pageNo, totalPages);
+    root.appendChild(pageBundle.page);
+
+    for (let i = 0; i < chars.length; i++) {
+      if (rowIndex >= perPageRows) {
+        pageNo += 1;
+        pageBundle = createPage(opts, pageNo, totalPages);
+        root.appendChild(pageBundle.page);
+        rowIndex = 0;
+      }
+
+      const ch = chars[i];
+      for (let c = 0; c < opts.cols; c++) {
+        const show = (opts.mode === 'trace') ? ch : (c === 0 ? ch : '');
+        pageBundle.sheet.appendChild(makeCell(opts, show));
+      }
+      rowIndex += 1;
+    }
+
+    while (rowIndex < perPageRows) {
+      for (let c = 0; c < opts.cols; c++) {
+        pageBundle.sheet.appendChild(makeCell(opts, ''));
+      }
+      rowIndex += 1;
+    }
+  }
+
+  function renderPageLayout(opts, chars, totalPages) {
+    const root = document.getElementById('pagesRoot');
+    root.innerHTML = '';
+
+    const cellsPerPage = opts.cols * opts.rows;
+    let idx = 0;
+    let pageNo = 1;
+
+    const pagesToRender = Math.min(20, totalPages);
+    while (pageNo <= pagesToRender) {
+      const pageBundle = createPage(opts, pageNo, totalPages);
+      root.appendChild(pageBundle.page);
+
+      for (let i = 0; i < cellsPerPage; i++) {
+        let ch = '';
+        if (chars.length > 0) {
+          if (idx < chars.length) ch = chars[idx];
+          else if (opts.repeatFill) ch = chars[idx % chars.length];
+          else ch = '';
+        }
+        pageBundle.sheet.appendChild(makeCell(opts, ch));
+        idx += 1;
+      }
+
+      pageNo += 1;
+    }
+  }
+
+  function readOpts() {
     const text = (document.getElementById('zitieText').value || '').trim();
     const layout = document.getElementById('zitieLayout').value;
     const grid = document.getElementById('zitieGrid').value;
     const font = document.getElementById('zitieFont').value;
     const charColor = document.getElementById('zitieCharColor').value;
     const mode = document.getElementById('zitieMode').value;
-    const repeatFill = document.getElementById('zitieRepeatFill').value;
+    const repeatFill = document.getElementById('zitieRepeatFill').value === '1';
 
-    const params = new URLSearchParams();
-    params.set('text', text);
-    params.set('layout', layout);
-    params.set('grid', grid);
-    params.set('font', font);
-    params.set('charColor', charColor);
-    params.set('mode', mode);
-    params.set('repeatFill', repeatFill);
-    params.set('autoPrint', autoPrint ? '1' : '0');
+    const cellMM = STANDARD_CELL_MM;
+    const { cols, rows } = calcColsRows(cellMM, 14, 14);
+    return { text, layout, grid, font, charColor, mode, repeatFill, cellMM, cols, rows };
+  }
 
-    const url = `/tools/zitie-new/print?${params.toString()}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+  let renderTimer = null;
+  function scheduleRender() {
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = setTimeout(renderAll, 120);
+  }
+
+  function renderAll() {
+    const opts = readOpts();
+    const chars = sanitizeChars(opts.text);
+    const safeChars = chars.length ? chars : ['字'];
+
+    const totalPages = computeTotalPages(opts, chars);
+    const pageCountEl = document.getElementById('pageCount');
+    if (pageCountEl) pageCountEl.textContent = String(totalPages);
+
+    if (opts.layout === 'row') renderRowLayout(opts, safeChars, totalPages);
+    else renderPageLayout(opts, chars, totalPages);
+  }
+
+  // ======= 顶部二维码（指向生成页）=======
+  async function renderQRCode() {
+    const img = document.getElementById('qrcodeImg');
+    if (!img) return;
+    const url = `${window.location.origin}/tools/zitie-new`;
+    try {
+      const resp = await fetch('/api/utils/qrcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: url, fill_color: '#111827', back_color: 'white' })
+      });
+      if (!resp.ok) throw new Error('qrcode api failed');
+      const blob = await resp.blob();
+      img.src = URL.createObjectURL(blob);
+    } catch (e) {
+      // fallback: text
+      img.alt = url;
+    }
   }
 
   // default example
   fillExample('一二三十木禾');
+  renderQRCode();
+  renderAll();
+
+  // bind events
+  ['zitieText','zitieLayout','zitieGrid','zitieFont','zitieCharColor','zitieMode','zitieRepeatFill'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', scheduleRender);
+    el.addEventListener('change', scheduleRender);
+  });
 </script>
 {% endblock %}
 

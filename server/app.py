@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from server.core.config import settings
 from server.core.exceptions import global_exception_handler
@@ -123,7 +123,12 @@ async def tool_zitie_new(request: Request):
 
 @app.get("/tools/zitie-new/print", response_class=HTMLResponse)
 async def tool_zitie_new_print(request: Request):
-    return templates.TemplateResponse("tools/zitie_new_print.html", {"request": request})
+    # 已合并为“当前页面实时预览”，兼容旧链接直接跳回生成页
+    query = request.url.query
+    url = "/tools/zitie-new"
+    if query:
+        url = f"{url}?{query}"
+    return RedirectResponse(url=url, status_code=302)
 
 
 @app.get("/sitemap.xml", response_class=HTMLResponse)
