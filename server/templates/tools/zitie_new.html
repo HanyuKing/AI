@@ -3,123 +3,143 @@
 {% block title %}字帖生成（新版） - 在线工具{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto mt-10 print:hidden">
-  <div class="glass shadow-lg rounded-lg overflow-hidden p-6">
-    <div class="flex items-start justify-between gap-6">
-      <div class="min-w-0">
-        <h2 class="text-xl font-bold text-gray-800">字帖生成（新版）</h2>
-        <p class="text-sm text-gray-600 mt-1">在当前页面实时预览，直接打印/导出 PDF（不再使用单独“预览页”）。</p>
-        <div class="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-          <button type="button" onclick="window.print()"
-            class="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 shadow-sm transition-colors font-medium">
+<div class="max-w-6xl mx-auto mt-10">
+  <div class="glass shadow-lg rounded-lg overflow-hidden p-6 print:shadow-none print:border-none print:p-0">
+    <div class="flex flex-col lg:flex-row gap-6 items-start print:block">
+      <!-- Left Control Panel -->
+      <div class="w-full lg:w-80 shrink-0 flex flex-col gap-4 print:hidden">
+        
+        <!-- Content Card -->
+        <div class="glass shadow-sm rounded-lg p-5 border border-gray-100">
+          <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            内容设置
+          </h3>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">字帖标题</label>
+              <input type="text" id="zitieTitle" value="字帖练习" 
+                class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary text-sm">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">练习内容</label>
+              <textarea id="zitieText" rows="5"
+                class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary text-sm"
+                placeholder="输入汉字、词语或句子..."></textarea>
+              <div class="mt-2 flex flex-wrap gap-2">
+                 <button class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition-colors" type="button" onclick="fillExample('一二三十木禾')">基础字</button>
+                 <button class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition-colors" type="button" onclick="fillExample('春眠不觉晓处处闻啼鸟')">古诗</button>
+                 <button class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition-colors" type="button" onclick="fillExample('坚持练字，越来越好。')">句子</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Style Card -->
+        <div class="glass shadow-sm rounded-lg p-5 border border-gray-100">
+          <div class="flex items-center justify-between mb-3 cursor-pointer select-none" onclick="document.getElementById('styleOptions').classList.toggle('hidden'); document.getElementById('styleArrow').classList.toggle('rotate-180')">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+              <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+              样式选项
+            </h3>
+            <svg id="styleArrow" class="w-4 h-4 text-gray-400 transform transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          
+          <div id="styleOptions" class="space-y-4 hidden">
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">模板布局</label>
+              <div class="grid grid-cols-2 gap-2">
+                 <button type="button" class="border rounded px-2 py-1.5 text-sm text-center transition-colors border-primary bg-primary/5 text-primary font-medium" id="btnLayoutRow" onclick="setOpt('zitieLayout', 'row')">单字行练</button>
+                 <button type="button" class="border border-gray-200 rounded px-2 py-1.5 text-sm text-center text-gray-600 hover:bg-gray-50 transition-colors" id="btnLayoutPage" onclick="setOpt('zitieLayout', 'page')">整页通练</button>
+              </div>
+              <input type="hidden" id="zitieLayout" value="row">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">练习模式</label>
+              <select id="zitieMode" class="w-full border border-gray-300 rounded-md p-1.5 text-sm">
+                <option value="copy">临摹 (只显示首字)</option>
+                <option value="trace" selected>描红 (全显虚字)</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">格子类型</label>
+                <select id="zitieGrid" class="w-full border border-gray-300 rounded-md p-1.5 text-sm">
+                  <option value="mizi">米字格</option>
+                  <option value="tian" selected>田字格</option>
+                  <option value="huigong">回宫格</option>
+                  <option value="square">方格</option>
+                  <option value="none">无格线</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">字体选择</label>
+                <select id="zitieFont" class="w-full border border-gray-300 rounded-md p-1.5 text-sm">
+                  <option value="kaiti" selected>楷体</option>
+                  <option value="songti">宋体</option>
+                  <option value="heiti">黑体</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="repeatFillContainer" class="hidden">
+               <label class="flex items-center gap-2 text-sm text-gray-700">
+                 <input type="checkbox" id="zitieRepeatFill" class="rounded text-primary focus:ring-primary">
+                 <span>循环填充整页</span>
+               </label>
+            </div>
+
+            <div>
+               <label class="block text-xs font-medium text-gray-500 mb-1">参考字颜色</label>
+               <div class="flex items-center gap-2">
+                 <input type="color" id="zitieCharColor" value="#000000" class="h-8 w-12 p-0.5 border border-gray-300 rounded cursor-pointer">
+                 <span class="text-xs text-gray-400">点击调整颜色</span>
+               </div>
+            </div>
+            
+            <div class="pt-2 border-t border-gray-100">
+               <p class="text-[10px] text-gray-400 leading-relaxed">
+                 说明：A4标准尺寸，红色格线。字号与格宽已优化适配打印。
+               </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Card -->
+        <div class="glass shadow-sm rounded-lg p-5 border border-gray-100 text-center">
+           <button type="button" onclick="window.print()"
+            class="w-full py-2.5 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg hover:shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
             打印 / 导出 PDF
           </button>
-          <div class="px-3 py-2 bg-white/60 border border-white/50 rounded-md">
-            共 <span id="pageCount" class="font-semibold text-gray-900">1</span> 页
+          <div class="mt-3 text-xs text-gray-500">
+            共 <span id="pageCount" class="font-bold text-gray-800 text-base">1</span> 页
           </div>
-          <a href="/tools/calligraphy" class="text-primary hover:underline whitespace-nowrap">去旧版字帖 →</a>
+           <div class="mt-3 pt-3 border-t border-gray-100 flex justify-center">
+             <a href="/tools/calligraphy" class="text-xs text-gray-400 hover:text-primary transition-colors">切换回旧版</a>
+           </div>
+        </div>
+
+        <!-- QR Code Side -->
+        <div class="text-center mt-2">
+            <div class="inline-block p-2 bg-white rounded-lg shadow-sm border border-gray-100">
+               <img id="qrcodeImg" alt="QR" class="w-20 h-20 object-contain opacity-80" />
+            </div>
+            <div class="text-[10px] text-gray-400 mt-1">手机扫码练习</div>
         </div>
       </div>
 
-      <div class="flex items-center gap-4 shrink-0">
-        <div class="text-right">
-          <div class="text-xs text-gray-500 mb-2">扫码打开字帖生成页</div>
-          <div class="w-24 h-24 border border-gray-200 rounded-lg bg-white flex items-center justify-center overflow-hidden">
-            <img id="qrcodeImg" alt="字帖生成页二维码" class="w-full h-full object-contain" />
-          </div>
-        </div>
+      <!-- Right Preview Area -->
+      <div class="flex-1 min-w-0 w-full print:w-auto print:flex-none">
+         <div id="pagesRoot" class="flex flex-col items-center gap-8 print:p-0 print:gap-0 print:block">
+           <!-- Pages will be rendered here -->
+         </div>
       </div>
     </div>
-
-    <div class="mt-6 grid grid-cols-1 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">练习内容</label>
-        <textarea id="zitieText" rows="4"
-          class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary"
-          placeholder="输入要练习的汉字/词语/句子（会自动过滤空白字符）"></textarea>
-        <div class="mt-2 text-xs text-gray-500 flex flex-wrap gap-3">
-          <button class="underline" type="button" onclick="fillExample('一二三十木禾')">示例：基础字</button>
-          <button class="underline" type="button" onclick="fillExample('春眠不觉晓处处闻啼鸟')">示例：古诗</button>
-          <button class="underline" type="button" onclick="fillExample('坚持练字，越来越好。')">示例：句子</button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">模板</label>
-          <select id="zitieLayout" class="border border-gray-300 rounded-md p-2 w-full">
-            <option value="row" selected>单字行练（每个字一行）</option>
-            <option value="page">整页通练（按顺序铺满整页）</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">格子类型</label>
-          <select id="zitieGrid" class="border border-gray-300 rounded-md p-2 w-full">
-            <option value="mizi">米字格</option>
-            <option value="tian" selected>田字格</option>
-            <option value="huigong">回宫格</option>
-            <option value="square">方格</option>
-            <option value="none">无格线（只显示字）</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">规格</label>
-          <div class="border border-gray-300 rounded-md p-2 text-sm text-gray-700 bg-white/60">
-            标准字帖（固定格宽/字大小/红色格线）
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">字体</label>
-          <select id="zitieFont" class="border border-gray-300 rounded-md p-2 w-full">
-            <option value="kaiti" selected>楷体（推荐）</option>
-            <option value="songti">宋体</option>
-            <option value="heiti">黑体</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">参考字颜色</label>
-          <input type="color" id="zitieCharColor" value="#000000"
-            class="h-10 w-full p-1 border border-gray-300 rounded-md">
-        </div>
-        <div class="text-sm text-gray-600">
-          <div class="font-medium text-gray-700 mb-1">格线颜色</div>
-          <div class="border border-gray-200 rounded-md p-2 bg-white/60">固定红色（不可选择）</div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">模式</label>
-          <select id="zitieMode" class="border border-gray-300 rounded-md p-2 w-full">
-            <option value="copy" selected>临摹（只给参考字）</option>
-            <option value="trace">描红（每格都给参考字）</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">整页通练：是否循环铺满</label>
-          <select id="zitieRepeatFill" class="border border-gray-300 rounded-md p-2 w-full">
-            <option value="1">循环铺满</option>
-            <option value="0" selected>不循环（用完即止）</option>
-          </select>
-        </div>
-        <div class="text-xs text-gray-500">
-          <p><strong>说明：</strong>格宽、字大小、格线样式已按常见字帖规范固定。</p>
-        </div>
-      </div>
-
-      <div class="text-xs text-gray-500">
-        <p><strong>提示：</strong>下方为实时预览。点击上方“打印/导出 PDF”即可打印或保存 PDF。</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Pages Preview -->
-<div id="pagesRoot" class="w-full flex flex-col items-center gap-8 bg-gray-100 py-8 print:p-0 print:gap-0 print:bg-white">
-</div>
 
 <style>
   :root {
@@ -137,26 +157,61 @@
 
   @media print {
     @page { size: A4; margin: 0; }
-    header, footer, #bing-bg { display: none !important; }
-    main { padding: 0 !important; max-width: none !important; }
-    body { margin: 0; padding: 0; background: #fff !important; }
-    .print\:hidden { display: none !important; }
+    
+    /* Hide standard site UI */
+    header, footer, #bing-bg, .print\:hidden { 
+      display: none !important; 
+    }
+
+    /* Reset Body/Main */
+    body { 
+      background: #fff !important; 
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    main {
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+      max-width: none !important;
+    }
+    
+    /* Reset containers path to #pagesRoot */
+    .max-w-6xl {
+        max-width: none !important;
+        margin: 0 !important;
+    }
+    .glass {
+        box-shadow: none !important;
+        background: none !important;
+        border: none !important;
+    }
+
+    /* Pages Container */
     #pagesRoot {
       display: block !important;
+      width: 100% !important;
+      margin: 0 !important;
       padding: 0 !important;
-      background: #fff !important;
-      gap: 0 !important;
+      background: transparent !important;
     }
+
+    /* Page Item */
     .page {
       box-shadow: none !important;
       margin: 0 auto !important;
-      /* 避免最后一页也强制分页导致多出空白第2页 */
       break-after: page;
       page-break-after: always;
+      position: relative !important;
     }
     .page:last-child {
       break-after: auto;
       page-break-after: auto;
+    }
+    
+    * { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
     }
   }
 
@@ -178,6 +233,19 @@
     font-size: 12px;
     color: #111827;
     margin-bottom: 2mm;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 4mm;
+  }
+
+  .header-qrcode {
+    width: 12mm;
+    height: 12mm;
+    object-fit: contain;
+    /* mix-blend-mode: multiply; */ /* Optional: to blend if background wasn't white */
   }
 
   .page-title { font-weight: 700; letter-spacing: 0.5px; }
@@ -250,6 +318,14 @@
 <script>
   function fillExample(text) {
     document.getElementById('zitieText').value = text;
+    scheduleRender();
+  }
+
+  function setOpt(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val;
+    el.dispatchEvent(new Event('change'));
   }
 
   // ======= 实时渲染（同页预览 + 打印）=======
@@ -259,10 +335,7 @@
   const GRID_COLOR_HEX = '#ef4444';
   const GRID_BORDER_OPACITY = 1.0;
   const GRID_INNER_OPACITY = 0.55;
-  // 描红参考字：固定淡灰（符合常见描红字帖）
-  const TRACE_CHAR_COLOR_HEX = '#9CA3AF';
-  // 临摹参考字：固定全黑（符合常见临摹字帖）
-  const COPY_CHAR_COLOR_HEX = '#000000';
+  
   // CSS 绝对单位换算：1in = 96px, 1in = 25.4mm
   const PX_PER_MM = 96 / 25.4;
 
@@ -286,48 +359,65 @@
   }
 
   function computeRefCharRgba(opts) {
-    // 颜色规则：
-    // - 整页通练(page)：参考字全灰
-    // - 单字行练(row)：临摹(copy)全黑；描红(trace)默认灰（首列可单独覆写为黑）
+    // 颜色逻辑优化：
+    // - 用户可自定义颜色 (opts.charColor)，默认为黑。
+    // - 整页通练(page) 或 描红模式(trace)：颜色透明度降低（方便描写），但加深到 0.45 以防看不清。
+    // - 临摹模式(copy)：通常为空或全黑（取决于具体 cell 逻辑），此处定义 page 级默认值。
+    
     const isTrace = opts.mode === 'trace';
     const isPageLayout = opts.layout === 'page';
-    const hex = (isPageLayout || isTrace) ? TRACE_CHAR_COLOR_HEX : COPY_CHAR_COLOR_HEX;
-    const alpha = (isPageLayout || isTrace) ? 0.22 : 1.0;
+    
+    const hex = opts.charColor || '#000000';
+    let alpha = 1.0;
+    
+    if (isPageLayout || isTrace) {
+        // 描红/整页模式：使用 0.30 透明度，既能看清又能描
+        // 如果用户选了浅色，可能看不清，建议选深色
+        alpha = 0.30;
+    }
+    
     const rgb = hexToRgb(hex);
     return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
   }
 
   function computeRefCharRgbaForCell(opts, colIndex) {
-    // 描红(row)：仅第一列黑，其它列灰
-    if (opts.layout === 'row' && opts.mode === 'trace') {
+    // 单字行练(row) 特殊逻辑：
+    // - 首字：始终 100% 显色（作为范例）
+    // - 后续字：
+    //   - 描红模式：显示淡色参考字 (alpha 0.45)
+    //   - 临摹模式：不显示 (空)
+    
+    if (opts.layout === 'row') {
+      const rgb = hexToRgb(opts.charColor || '#000000');
+      
       if (colIndex === 0) {
-        const rgb = hexToRgb(COPY_CHAR_COLOR_HEX);
         return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`;
       }
-      const rgb = hexToRgb(TRACE_CHAR_COLOR_HEX);
-      return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.22)`;
+      
+      if (opts.mode === 'trace') {
+        return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.30)`;
+      }
+      
+      // Copy mode non-first cells are empty, color doesn't matter much but keep consistent
+      return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.45)`;
     }
+    
     return computeRefCharRgba(opts);
   }
 
   /**
-   * 计算“视觉居中”补偿量（px），避免中文字体由于 ascent/descent 不对称导致看起来偏移。
-   * 原理：用 canvas.measureText 得到实际像素包围盒（ascent/descent/left/right），
-   * 让包围盒中心与格子中心对齐。
+   * 计算“视觉居中”补偿量（px）
    */
   function computeCharCenterShiftPx(opts, chars) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx || typeof ctx.measureText !== 'function') return { x: 0, y: 0 };
 
-    // 与 .char 的 font-size 保持一致：cellMM * 0.68mm
     const fontSizePx = opts.cellMM * 0.68 * PX_PER_MM;
     const family = fontFamilyByKey(opts.font);
     ctx.font = `400 ${fontSizePx}px ${family}`;
 
-    // 采样字符：优先用输入内容里的字符，否则用一组相对对称的汉字
     const samples = [];
-    // 尽量只用汉字做采样，避免标点/空格导致的水平中心偏差
     const takeFromInput = (chars || [])
       .filter(c => c && c.trim() && /[\u4e00-\u9fff]/.test(c))
       .slice(0, 12);
@@ -339,13 +429,9 @@
     let sumX = 0, sumY = 0, n = 0;
     for (const ch of samples) {
       const m = ctx.measureText(ch);
-      // 某些老浏览器可能没有 actualBoundingBox*，直接不补偿
       if (m.actualBoundingBoxAscent == null || m.actualBoundingBoxDescent == null) continue;
       if (m.actualBoundingBoxLeft == null || m.actualBoundingBoxRight == null) continue;
 
-      // 目标：让“字形真实包围盒中心”对齐到“文本布局盒子中心”
-      // - X 方向：文本盒子中心约为 advance width 的一半（m.width/2）
-      // - Y 方向：文本盒子中心用 fontBoundingBox/emHeight 估计（更贴近 CSS 行盒）
       const bboxCenterX = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2;
       const boxCenterX = (m.width != null ? m.width : (m.actualBoundingBoxRight + m.actualBoundingBoxLeft)) / 2;
       const dx = boxCenterX - bboxCenterX;
@@ -367,9 +453,8 @@
     }
     if (!n) return { x: 0, y: 0 };
 
-    // 限幅：避免某些字体/字符测量异常导致夸张偏移
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const maxShift = fontSizePx * 0.18; // 一般够用（约 0.18em）
+    const maxShift = fontSizePx * 0.18; 
     return {
       x: clamp(sumX / n, -maxShift, maxShift),
       y: clamp(sumY / n, -maxShift, maxShift),
@@ -383,7 +468,7 @@
   function calcColsRows(cellMM, padMM, headerMM) {
     const pageW = 210, pageH = 297;
     const contentW = pageW - padMM * 2;
-    const contentH = pageH - padMM * 2 - headerMM - 2; // 2mm header gap
+    const contentH = pageH - padMM * 2 - headerMM - 2; 
     const cols = Math.max(1, Math.floor(contentW / cellMM));
     const rows = Math.max(1, Math.floor(contentH / cellMM));
     return { cols, rows };
@@ -393,12 +478,10 @@
     const page = document.createElement('div');
     page.className = 'page';
     page.style.setProperty('--cell-mm', String(opts.cellMM));
-    // 注意：有些情况下 CSS 变量在打印/重绘时会退回到 :root 默认值，
-    // 导致“单行模板第一列永远全黑”。这里统一计算一次，并同时在 cell 上覆盖，确保稳定。
+    
     const charRgba = computeRefCharRgba(opts);
     page.style.setProperty('--char-color-rgba', charRgba);
 
-    // 计算并设置文字居中补偿（每页一次，成本很低）
     const charsForMeasure = sanitizeChars(opts.text);
     const shift = computeCharCenterShiftPx(opts, charsForMeasure);
     page.style.setProperty('--char-shift-x', `${shift.x.toFixed(2)}px`);
@@ -406,8 +489,15 @@
 
     const header = document.createElement('div');
     header.className = 'page-header';
+
+    const qrSrc = window.generatedQrcodeUrl || '';
+    const qrHtml = qrSrc ? `<img src="${qrSrc}" class="header-qrcode" />` : '';
+
     header.innerHTML = `
-      <div class="page-title">字帖练习</div>
+      <div class="header-left">
+        ${qrHtml}
+        <div class="page-title">${opts.title || '字帖练习'}</div>
+      </div>
       <div class="page-fields">姓名：__________　日期：____年__月__日</div>
     `;
 
@@ -444,11 +534,8 @@
     svg.setAttribute('width', w + 'mm');
     svg.setAttribute('height', h + 'mm');
     svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    // 打印/导出 PDF 时，SVG pattern 容易被浏览器栅格化（出现马赛克）。
-    // 这里改为直接绘制每条线（纯矢量），确保打印清晰。
     svg.setAttribute('shape-rendering', 'geometricPrecision');
 
-    // 内线/对角线过细会在打印时被抗锯齿“吃掉”，加粗一点
     const innerW = 0.28;
     const diagW = 0.25;
 
@@ -459,7 +546,6 @@
       line.setAttribute('x2', String(x2));
       line.setAttribute('y2', String(y2));
       
-      // 强制内联样式，防止 PDF 渲染器添加默认黑色描边
       line.style.stroke = GRID_COLOR_HEX;
       line.style.strokeWidth = String(sw);
       line.style.strokeOpacity = String(opacity);
@@ -471,8 +557,6 @@
       line.setAttribute('stroke-linecap', 'square');
       line.setAttribute('fill', 'none');
       
-      // 移除 crispEdges，交给浏览器平滑处理（避免锯齿/黑边）
-      // 移除 vector-effect，避免 PDF 渲染鬼影
       if (crisp && !dashed) line.setAttribute('shape-rendering', 'geometricPrecision');
       
       if (dashed) {
@@ -489,7 +573,6 @@
       svg.appendChild(line);
     };
 
-    // 外框 + 分隔线（只画一次）
     const strokeW = 0.60;
     const halfStroke = strokeW / 2;
     const border = document.createElementNS(NS, 'rect');
@@ -536,7 +619,6 @@
       svg.appendChild(line);
     }
 
-    // 内线（逐格绘制，避免 pattern 在打印时栅格化）
     const needCross = (opts.grid === 'tian' || opts.grid === 'mizi' || opts.grid === 'huigong');
     const needDiag = (opts.grid === 'mizi');
     const needHuigong = (opts.grid === 'huigong');
@@ -548,12 +630,10 @@
       for (let c = 0; c < opts.cols; c++) {
         const x0 = c * cell;
         if (needCross) {
-          // 田字/米字：十字线改为虚线
           addLine(x0 + half, y0, x0 + half, y0 + cell, innerW, GRID_INNER_OPACITY, true, true);
           addLine(x0, y0 + half, x0 + cell, y0 + half, innerW, GRID_INNER_OPACITY, true, true);
         }
         if (needDiag) {
-          // 米字：对角线改为虚线
           addLine(x0, y0, x0 + cell, y0 + cell, diagW, GRID_INNER_OPACITY, false, true);
           addLine(x0 + cell, y0, x0, y0 + cell, diagW, GRID_INNER_OPACITY, false, true);
         }
@@ -584,7 +664,6 @@
   function makeCell(opts, chOrEmpty, colIndex = null) {
     const cell = document.createElement('div');
     cell.className = `cell font-${opts.font}`;
-    // 再在 cell 级别设置一次颜色变量，避免个别情况下 page 级变量未生效
     cell.style.setProperty('--char-color-rgba', colIndex == null ? computeRefCharRgba(opts) : computeRefCharRgbaForCell(opts, colIndex));
     if (chOrEmpty) {
       const span = document.createElement('span');
@@ -669,17 +748,21 @@
   }
 
   function readOpts() {
+    const title = (document.getElementById('zitieTitle').value || '字帖练习').trim();
     const text = (document.getElementById('zitieText').value || '').trim();
     const layout = document.getElementById('zitieLayout').value;
     const grid = document.getElementById('zitieGrid').value;
     const font = document.getElementById('zitieFont').value;
     const charColor = document.getElementById('zitieCharColor').value;
     const mode = document.getElementById('zitieMode').value;
-    const repeatFill = document.getElementById('zitieRepeatFill').value === '1';
+    
+    // Checkbox handling
+    const repeatEl = document.getElementById('zitieRepeatFill');
+    const repeatFill = repeatEl ? repeatEl.checked : false;
 
     const cellMM = STANDARD_CELL_MM;
     const { cols, rows } = calcColsRows(cellMM, 14, 14);
-    return { text, layout, grid, font, charColor, mode, repeatFill, cellMM, cols, rows };
+    return { title, text, layout, grid, font, charColor, mode, repeatFill, cellMM, cols, rows };
   }
 
   let renderTimer = null;
@@ -689,15 +772,28 @@
   }
 
   function syncRepeatFillUI() {
-    const layoutEl = document.getElementById('zitieLayout');
-    const repeatEl = document.getElementById('zitieRepeatFill');
-    if (!layoutEl || !repeatEl) return;
-    const isRow = layoutEl.value === 'row';
-    // row 模式下不需要“循环铺满”，默认并强制为“不循环”
-    repeatEl.disabled = isRow;
-    repeatEl.classList.toggle('opacity-50', isRow);
-    repeatEl.classList.toggle('cursor-not-allowed', isRow);
-    if (isRow) repeatEl.value = '0';
+    const layout = document.getElementById('zitieLayout').value;
+    const isRow = layout === 'row';
+    
+    // Toggle container
+    const c = document.getElementById('repeatFillContainer');
+    if (c) {
+        if (isRow) c.classList.add('hidden');
+        else c.classList.remove('hidden');
+    }
+    
+    // Update Layout Buttons
+    const btnRow = document.getElementById('btnLayoutRow');
+    const btnPage = document.getElementById('btnLayoutPage');
+    if (btnRow && btnPage) {
+        if (isRow) {
+            btnRow.className = "border rounded px-2 py-1.5 text-sm text-center transition-colors border-primary bg-primary/5 text-primary font-medium";
+            btnPage.className = "border border-gray-200 rounded px-2 py-1.5 text-sm text-center text-gray-600 hover:bg-gray-50 transition-colors";
+        } else {
+            btnPage.className = "border rounded px-2 py-1.5 text-sm text-center transition-colors border-primary bg-primary/5 text-primary font-medium";
+            btnRow.className = "border border-gray-200 rounded px-2 py-1.5 text-sm text-center text-gray-600 hover:bg-gray-50 transition-colors";
+        }
+    }
   }
 
   function renderAll() {
@@ -727,8 +823,15 @@
       });
       if (!resp.ok) throw new Error('qrcode api failed');
       const blob = await resp.blob();
-      img.src = URL.createObjectURL(blob);
+      const objUrl = URL.createObjectURL(blob);
+      img.src = objUrl;
+      
+      // Store globally and re-render pages to include QR code
+      window.generatedQrcodeUrl = objUrl;
+      scheduleRender();
+
     } catch (e) {
+      console.error(e);
       // fallback: text
       img.alt = url;
     }
@@ -738,10 +841,10 @@
   fillExample('一二三十木禾');
   renderQRCode();
   syncRepeatFillUI();
-  renderAll();
+  // renderAll() is called by fillExample -> scheduleRender
 
   // bind events
-  ['zitieText','zitieLayout','zitieGrid','zitieFont','zitieCharColor','zitieMode','zitieRepeatFill'].forEach(id => {
+  ['zitieTitle','zitieText','zitieLayout','zitieGrid','zitieFont','zitieCharColor','zitieMode','zitieRepeatFill'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('input', scheduleRender);
