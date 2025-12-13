@@ -458,26 +458,32 @@
       line.setAttribute('y1', String(y1));
       line.setAttribute('x2', String(x2));
       line.setAttribute('y2', String(y2));
+      
+      // 强制内联样式，防止 PDF 渲染器添加默认黑色描边
+      line.style.stroke = GRID_COLOR_HEX;
+      line.style.strokeWidth = String(sw);
+      line.style.strokeOpacity = String(opacity);
+      line.style.fill = 'none';
+      
       line.setAttribute('stroke', GRID_COLOR_HEX);
       line.setAttribute('stroke-opacity', String(opacity));
       line.setAttribute('stroke-width', String(sw));
       line.setAttribute('stroke-linecap', 'square');
-      if (crisp) line.setAttribute('shape-rendering', 'crispEdges');
+      line.setAttribute('fill', 'none');
+      
+      // 移除 crispEdges，交给浏览器平滑处理（避免锯齿/黑边）
+      // 移除 vector-effect，避免 PDF 渲染鬼影
+      if (crisp && !dashed) line.setAttribute('shape-rendering', 'geometricPrecision');
+      
       if (dashed) {
-        // 虚线更密集：1.5 1.5
         line.setAttribute('stroke-dasharray', '1.5 1.5');
-        // 计算 offset 让中心对齐：让线段的中心（长度的一半）处于实线段的中心
-        // 假设长度 L，中心点 L/2。希望 L/2 处在 pattern 实线中心 (0.75)。
-        // offset = (L/2 % 3) - 0.75
+        line.style.strokeDasharray = '1.5 1.5';
         const dx = Math.abs(x2 - x1);
         const dy = Math.abs(y2 - y1);
-        const len = Math.max(dx, dy); // 都是水平或垂直线
-        // pattern 周期 3 (1.5+1.5)，实线中心 0.75
+        const len = Math.sqrt(dx*dx + dy*dy);
         const offset = (len / 2) % 3 - 0.75;
-        line.setAttribute('stroke-dashoffset', String(-offset)); // offset 为负表示向左移
-
-        // 虚线通常不需要 crispEdges，否则容易锯齿严重
-        line.removeAttribute('shape-rendering'); 
+        line.setAttribute('stroke-dashoffset', String(-offset));
+        line.style.strokeDashoffset = String(-offset);
         line.setAttribute('shape-rendering', 'geometricPrecision');
       }
       svg.appendChild(line);
@@ -487,26 +493,47 @@
     const strokeW = 0.60;
     const halfStroke = strokeW / 2;
     const border = document.createElementNS(NS, 'rect');
-    // 向内缩半个线宽，避免 stroke 画到 viewBox 外被裁切导致“边框没了”
     border.setAttribute('x', String(halfStroke));
     border.setAttribute('y', String(halfStroke));
     border.setAttribute('width', String(w - strokeW));
     border.setAttribute('height', String(h - strokeW));
     border.setAttribute('fill', 'none');
+    border.style.fill = 'none';
     border.setAttribute('stroke', GRID_COLOR_HEX);
     border.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
     border.setAttribute('stroke-width', String(strokeW));
     border.setAttribute('stroke-linecap', 'square');
-    border.setAttribute('shape-rendering', 'crispEdges');
+    border.style.stroke = GRID_COLOR_HEX;
+    border.setAttribute('shape-rendering', 'geometricPrecision');
     svg.appendChild(border);
 
     for (let i = 1; i < opts.cols; i++) {
       const x = i * opts.cellMM;
-      addLine(x, halfStroke, x, h - halfStroke, strokeW, GRID_BORDER_OPACITY, true);
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(x));
+      line.setAttribute('y1', String(halfStroke));
+      line.setAttribute('x2', String(x));
+      line.setAttribute('y2', String(h - halfStroke));
+      line.setAttribute('stroke', GRID_COLOR_HEX);
+      line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
+      line.setAttribute('stroke-width', String(strokeW));
+      line.setAttribute('stroke-linecap', 'square');
+      line.setAttribute('shape-rendering', 'geometricPrecision');
+      svg.appendChild(line);
     }
     for (let j = 1; j < opts.rows; j++) {
       const y = j * opts.cellMM;
-      addLine(halfStroke, y, w - halfStroke, y, strokeW, GRID_BORDER_OPACITY, true);
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(halfStroke));
+      line.setAttribute('y1', String(y));
+      line.setAttribute('x2', String(w - halfStroke));
+      line.setAttribute('y2', String(y));
+      line.setAttribute('stroke', GRID_COLOR_HEX);
+      line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
+      line.setAttribute('stroke-width', String(strokeW));
+      line.setAttribute('stroke-linecap', 'square');
+      line.setAttribute('shape-rendering', 'geometricPrecision');
+      svg.appendChild(line);
     }
 
     // 内线（逐格绘制，避免 pattern 在打印时栅格化）
@@ -538,12 +565,14 @@
           rect.setAttribute('width', String(cell - inset * 2));
           rect.setAttribute('height', String(cell - inset * 2));
           rect.setAttribute('fill', 'none');
+          rect.style.fill = 'none';
           rect.setAttribute('stroke', GRID_COLOR_HEX);
+          rect.style.stroke = GRID_COLOR_HEX;
           rect.setAttribute('stroke-opacity', String(GRID_INNER_OPACITY));
           rect.setAttribute('stroke-width', String(innerW));
           rect.setAttribute('stroke-linecap', 'square');
           rect.setAttribute('stroke-dasharray', '1.2 1.2');
-          rect.setAttribute('shape-rendering', 'crispEdges');
+          rect.setAttribute('shape-rendering', 'geometricPrecision');
           svg.appendChild(rect);
         }
       }
@@ -720,5 +749,3 @@
   });
 </script>
 {% endblock %}
-
-
