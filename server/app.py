@@ -113,10 +113,6 @@ async def tool_pixel_converter(request: Request):
 async def tool_base64_to_image(request: Request):
     return templates.TemplateResponse("tools/base64_to_image.html", {"request": request})
 
-@app.get("/tools/calligraphy", response_class=HTMLResponse)
-async def tool_calligraphy(request: Request):
-    return templates.TemplateResponse("tools/calligraphy.html", {"request": request})
-
 @app.get("/tools/zitie-new", response_class=HTMLResponse)
 async def tool_zitie_new(request: Request):
     return templates.TemplateResponse("tools/zitie_new.html", {"request": request})
