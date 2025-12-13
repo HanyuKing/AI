@@ -48,8 +48,8 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">模板</label>
           <select id="zitieLayout" class="border border-gray-300 rounded-md p-2 w-full">
-            <option value="row">单字行练（每个字一行）</option>
-            <option value="page" selected>整页通练（按顺序铺满整页）</option>
+            <option value="row" selected>单字行练（每个字一行）</option>
+            <option value="page">整页通练（按顺序铺满整页）</option>
           </select>
         </div>
         <div>
@@ -101,8 +101,8 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">整页通练：是否循环铺满</label>
           <select id="zitieRepeatFill" class="border border-gray-300 rounded-md p-2 w-full">
-            <option value="1" selected>循环铺满</option>
-            <option value="0">不循环（用完即止）</option>
+            <option value="1">循环铺满</option>
+            <option value="0" selected>不循环（用完即止）</option>
           </select>
         </div>
         <div class="text-xs text-gray-500">
@@ -667,7 +667,20 @@
     renderTimer = setTimeout(renderAll, 120);
   }
 
+  function syncRepeatFillUI() {
+    const layoutEl = document.getElementById('zitieLayout');
+    const repeatEl = document.getElementById('zitieRepeatFill');
+    if (!layoutEl || !repeatEl) return;
+    const isRow = layoutEl.value === 'row';
+    // row 模式下不需要“循环铺满”，默认并强制为“不循环”
+    repeatEl.disabled = isRow;
+    repeatEl.classList.toggle('opacity-50', isRow);
+    repeatEl.classList.toggle('cursor-not-allowed', isRow);
+    if (isRow) repeatEl.value = '0';
+  }
+
   function renderAll() {
+    syncRepeatFillUI();
     const opts = readOpts();
     const chars = sanitizeChars(opts.text);
     const safeChars = chars.length ? chars : ['字'];
@@ -703,6 +716,7 @@
   // default example
   fillExample('一二三十木禾');
   renderQRCode();
+  syncRepeatFillUI();
   renderAll();
 
   // bind events
