@@ -285,6 +285,31 @@
     };
   }
 
+  function computeRefCharRgba(opts) {
+    // 颜色规则：
+    // - 整页通练(page)：参考字全灰
+    // - 单字行练(row)：临摹(copy)全黑；描红(trace)默认灰（首列可单独覆写为黑）
+    const isTrace = opts.mode === 'trace';
+    const isPageLayout = opts.layout === 'page';
+    const hex = (isPageLayout || isTrace) ? TRACE_CHAR_COLOR_HEX : COPY_CHAR_COLOR_HEX;
+    const alpha = (isPageLayout || isTrace) ? 0.22 : 1.0;
+    const rgb = hexToRgb(hex);
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+  }
+
+  function computeRefCharRgbaForCell(opts, colIndex) {
+    // 描红(row)：仅第一列黑，其它列灰
+    if (opts.layout === 'row' && opts.mode === 'trace') {
+      if (colIndex === 0) {
+        const rgb = hexToRgb(COPY_CHAR_COLOR_HEX);
+        return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`;
+      }
+      const rgb = hexToRgb(TRACE_CHAR_COLOR_HEX);
+      return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.22)`;
+    }
+    return computeRefCharRgba(opts);
+  }
+
   /**
    * 计算“视觉居中”补偿量（px），避免中文字体由于 ascent/descent 不对称导致看起来偏移。
    * 原理：用 canvas.measureText 得到实际像素包围盒（ascent/descent/left/right），
@@ -368,17 +393,10 @@
     const page = document.createElement('div');
     page.className = 'page';
     page.style.setProperty('--cell-mm', String(opts.cellMM));
-    // 颜色规则：
-    // - 整页通练(page)：参考字全灰（更适合整页练习，不抢格线/不刺眼）
-    // - 单字行练(row)：临摹(copy)全黑；描红(trace)灰色
-    const isTrace = opts.mode === 'trace';
-    const isPageLayout = opts.layout === 'page';
-    const charColorHex = isPageLayout ? TRACE_CHAR_COLOR_HEX : (isTrace ? TRACE_CHAR_COLOR_HEX : COPY_CHAR_COLOR_HEX);
-    const charOpacity = isPageLayout ? 0.22 : (isTrace ? 0.22 : 1.0);
-    page.style.setProperty('--char-color', charColorHex);
-    page.style.setProperty('--char-opacity', String(charOpacity));
-    const rgb = hexToRgb(charColorHex);
-    page.style.setProperty('--char-color-rgba', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${charOpacity})`);
+    // 注意：有些情况下 CSS 变量在打印/重绘时会退回到 :root 默认值，
+    // 导致“单行模板第一列永远全黑”。这里统一计算一次，并同时在 cell 上覆盖，确保稳定。
+    const charRgba = computeRefCharRgba(opts);
+    page.style.setProperty('--char-color-rgba', charRgba);
 
     // 计算并设置文字居中补偿（每页一次，成本很低）
     const charsForMeasure = sanitizeChars(opts.text);
@@ -542,9 +560,11 @@
     return svg;
   }
 
-  function makeCell(opts, chOrEmpty) {
+  function makeCell(opts, chOrEmpty, colIndex = null) {
     const cell = document.createElement('div');
     cell.className = `cell font-${opts.font}`;
+    // 再在 cell 级别设置一次颜色变量，避免个别情况下 page 级变量未生效
+    cell.style.setProperty('--char-color-rgba', colIndex == null ? computeRefCharRgba(opts) : computeRefCharRgbaForCell(opts, colIndex));
     if (chOrEmpty) {
       const span = document.createElement('span');
       span.className = 'char';
@@ -586,14 +606,14 @@
       const ch = chars[i];
       for (let c = 0; c < opts.cols; c++) {
         const show = (opts.mode === 'trace') ? ch : (c === 0 ? ch : '');
-        pageBundle.sheet.appendChild(makeCell(opts, show));
+        pageBundle.sheet.appendChild(makeCell(opts, show, c));
       }
       rowIndex += 1;
     }
 
     while (rowIndex < perPageRows) {
       for (let c = 0; c < opts.cols; c++) {
-        pageBundle.sheet.appendChild(makeCell(opts, ''));
+        pageBundle.sheet.appendChild(makeCell(opts, '', c));
       }
       rowIndex += 1;
     }
