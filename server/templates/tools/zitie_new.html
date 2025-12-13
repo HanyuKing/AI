@@ -55,8 +55,8 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">格子类型</label>
           <select id="zitieGrid" class="border border-gray-300 rounded-md p-2 w-full">
-            <option value="mizi" selected>米字格</option>
-            <option value="tian">田字格</option>
+            <option value="mizi">米字格</option>
+            <option value="tian" selected>田字格</option>
             <option value="huigong">回宫格</option>
             <option value="square">方格</option>
             <option value="none">无格线（只显示字）</option>
@@ -444,25 +444,15 @@
     svg.setAttribute('width', w + 'mm');
     svg.setAttribute('height', h + 'mm');
     svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    svg.setAttribute('shape-rendering', 'crispEdges');
-
-    const defs = document.createElementNS(NS, 'defs');
-    svg.appendChild(defs);
-
-    const patId = `pat-${opts.grid}-${opts.cellMM}`;
-    const pattern = document.createElementNS(NS, 'pattern');
-    pattern.setAttribute('id', patId);
-    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-    pattern.setAttribute('width', String(opts.cellMM));
-    pattern.setAttribute('height', String(opts.cellMM));
-    defs.appendChild(pattern);
+    // 打印/导出 PDF 时，SVG pattern 容易被浏览器栅格化（出现马赛克）。
+    // 这里改为直接绘制每条线（纯矢量），确保打印清晰。
+    svg.setAttribute('shape-rendering', 'geometricPrecision');
 
     // 内线/对角线过细会在打印时被抗锯齿“吃掉”，加粗一点
-    const innerW = 0.32;
-    const diagW = 0.30;
-    const half = opts.cellMM / 2;
+    const innerW = 0.28;
+    const diagW = 0.25;
 
-    const addLine = (x1, y1, x2, y2, sw, opacity) => {
+    const addLine = (x1, y1, x2, y2, sw, opacity, crisp = true, dashed = false) => {
       const line = document.createElementNS(NS, 'line');
       line.setAttribute('x1', String(x1));
       line.setAttribute('y1', String(y1));
@@ -472,44 +462,26 @@
       line.setAttribute('stroke-opacity', String(opacity));
       line.setAttribute('stroke-width', String(sw));
       line.setAttribute('stroke-linecap', 'square');
-      line.setAttribute('vector-effect', 'non-scaling-stroke');
-      pattern.appendChild(line);
+      if (crisp) line.setAttribute('shape-rendering', 'crispEdges');
+      if (dashed) {
+        // 虚线更密集：1.5 1.5
+        line.setAttribute('stroke-dasharray', '1.5 1.5');
+        // 计算 offset 让中心对齐：让线段的中心（长度的一半）处于实线段的中心
+        // 假设长度 L，中心点 L/2。希望 L/2 处在 pattern 实线中心 (0.75)。
+        // offset = (L/2 % 3) - 0.75
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const len = Math.max(dx, dy); // 都是水平或垂直线
+        // pattern 周期 3 (1.5+1.5)，实线中心 0.75
+        const offset = (len / 2) % 3 - 0.75;
+        line.setAttribute('stroke-dashoffset', String(-offset)); // offset 为负表示向左移
+
+        // 虚线通常不需要 crispEdges，否则容易锯齿严重
+        line.removeAttribute('shape-rendering'); 
+        line.setAttribute('shape-rendering', 'geometricPrecision');
+      }
+      svg.appendChild(line);
     };
-
-    if (opts.grid === 'tian' || opts.grid === 'mizi' || opts.grid === 'huigong') {
-      addLine(half, 0, half, opts.cellMM, innerW, GRID_INNER_OPACITY);
-      addLine(0, half, opts.cellMM, half, innerW, GRID_INNER_OPACITY);
-    }
-    if (opts.grid === 'mizi') {
-      addLine(0, 0, opts.cellMM, opts.cellMM, diagW, GRID_INNER_OPACITY);
-      addLine(opts.cellMM, 0, 0, opts.cellMM, diagW, GRID_INNER_OPACITY);
-    }
-    if (opts.grid === 'huigong') {
-      const inset = opts.cellMM * 0.25;
-      const rect = document.createElementNS(NS, 'rect');
-      rect.setAttribute('x', String(inset));
-      rect.setAttribute('y', String(inset));
-      rect.setAttribute('width', String(opts.cellMM - inset * 2));
-      rect.setAttribute('height', String(opts.cellMM - inset * 2));
-      rect.setAttribute('fill', 'none');
-      rect.setAttribute('stroke', GRID_COLOR_HEX);
-      rect.setAttribute('stroke-opacity', String(GRID_INNER_OPACITY));
-      rect.setAttribute('stroke-width', String(innerW));
-      rect.setAttribute('stroke-linecap', 'square');
-      rect.setAttribute('stroke-dasharray', '1.2 1.2');
-      rect.setAttribute('vector-effect', 'non-scaling-stroke');
-      pattern.appendChild(rect);
-    }
-
-    if (opts.grid !== 'square') {
-      const bg = document.createElementNS(NS, 'rect');
-      bg.setAttribute('x', '0');
-      bg.setAttribute('y', '0');
-      bg.setAttribute('width', String(w));
-      bg.setAttribute('height', String(h));
-      bg.setAttribute('fill', `url(#${patId})`);
-      svg.appendChild(bg);
-    }
 
     // 外框 + 分隔线（只画一次）
     const strokeW = 0.85;
@@ -525,36 +497,56 @@
     border.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
     border.setAttribute('stroke-width', String(strokeW));
     border.setAttribute('stroke-linecap', 'square');
-    border.setAttribute('vector-effect', 'non-scaling-stroke');
+    border.setAttribute('shape-rendering', 'crispEdges');
     svg.appendChild(border);
 
     for (let i = 1; i < opts.cols; i++) {
       const x = i * opts.cellMM;
-      const line = document.createElementNS(NS, 'line');
-      line.setAttribute('x1', String(x));
-      line.setAttribute('y1', String(halfStroke));
-      line.setAttribute('x2', String(x));
-      line.setAttribute('y2', String(h - halfStroke));
-      line.setAttribute('stroke', GRID_COLOR_HEX);
-      line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
-      line.setAttribute('stroke-width', String(strokeW));
-      line.setAttribute('stroke-linecap', 'square');
-      line.setAttribute('vector-effect', 'non-scaling-stroke');
-      svg.appendChild(line);
+      addLine(x, halfStroke, x, h - halfStroke, strokeW, GRID_BORDER_OPACITY, true);
     }
     for (let j = 1; j < opts.rows; j++) {
       const y = j * opts.cellMM;
-      const line = document.createElementNS(NS, 'line');
-      line.setAttribute('x1', String(halfStroke));
-      line.setAttribute('y1', String(y));
-      line.setAttribute('x2', String(w - halfStroke));
-      line.setAttribute('y2', String(y));
-      line.setAttribute('stroke', GRID_COLOR_HEX);
-      line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
-      line.setAttribute('stroke-width', String(strokeW));
-      line.setAttribute('stroke-linecap', 'square');
-      line.setAttribute('vector-effect', 'non-scaling-stroke');
-      svg.appendChild(line);
+      addLine(halfStroke, y, w - halfStroke, y, strokeW, GRID_BORDER_OPACITY, true);
+    }
+
+    // 内线（逐格绘制，避免 pattern 在打印时栅格化）
+    const needCross = (opts.grid === 'tian' || opts.grid === 'mizi' || opts.grid === 'huigong');
+    const needDiag = (opts.grid === 'mizi');
+    const needHuigong = (opts.grid === 'huigong');
+    const cell = opts.cellMM;
+    const half = cell / 2;
+
+    for (let r = 0; r < opts.rows; r++) {
+      const y0 = r * cell;
+      for (let c = 0; c < opts.cols; c++) {
+        const x0 = c * cell;
+        if (needCross) {
+          // 田字/米字：十字线改为虚线
+          addLine(x0 + half, y0, x0 + half, y0 + cell, innerW, GRID_INNER_OPACITY, true, true);
+          addLine(x0, y0 + half, x0 + cell, y0 + half, innerW, GRID_INNER_OPACITY, true, true);
+        }
+        if (needDiag) {
+          // 米字：对角线改为虚线
+          addLine(x0, y0, x0 + cell, y0 + cell, diagW, GRID_INNER_OPACITY, false, true);
+          addLine(x0 + cell, y0, x0, y0 + cell, diagW, GRID_INNER_OPACITY, false, true);
+        }
+        if (needHuigong) {
+          const inset = cell * 0.25;
+          const rect = document.createElementNS(NS, 'rect');
+          rect.setAttribute('x', String(x0 + inset));
+          rect.setAttribute('y', String(y0 + inset));
+          rect.setAttribute('width', String(cell - inset * 2));
+          rect.setAttribute('height', String(cell - inset * 2));
+          rect.setAttribute('fill', 'none');
+          rect.setAttribute('stroke', GRID_COLOR_HEX);
+          rect.setAttribute('stroke-opacity', String(GRID_INNER_OPACITY));
+          rect.setAttribute('stroke-width', String(innerW));
+          rect.setAttribute('stroke-linecap', 'square');
+          rect.setAttribute('stroke-dasharray', '1.2 1.2');
+          rect.setAttribute('shape-rendering', 'crispEdges');
+          svg.appendChild(rect);
+        }
+      }
     }
 
     return svg;
