@@ -1,0 +1,805 @@
+"""
+早好物爬虫脚本
+功能：
+1. 调用用户信息接口
+2. 获取排行榜数据并提取 uniqueContentId
+3. 批量发送 want 请求
+
+反爬虫措施：
+- 随机User-Agent
+- 随机延迟
+- 请求头伪装
+- Cookie轮换
+"""
+
+import time
+import json
+import random
+import httpx
+import threading
+import sys
+import hashlib
+from pathlib import Path
+from datetime import datetime, time as dt_time, timedelta
+from typing import List, Dict, Any, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# 设置无缓冲输出（确保日志实时写入）
+sys.stdout = sys.__stdout__
+sys.stderr = sys.__stderr__
+
+
+# 线程安全的打印锁
+_print_lock = threading.Lock()
+
+# 投票计数锁（用于文件操作）
+_vote_count_lock = threading.Lock()
+
+def get_timestamp() -> str:
+    """获取格式化的时间戳"""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def log_print(*args, **kwargs):
+    """
+    带时间戳的打印函数，立即刷新输出
+    
+    Args:
+        *args: 要打印的内容
+        **kwargs: print函数的其他参数
+    """
+    timestamp = get_timestamp()
+    if args:
+        content = ' '.join(str(arg) for arg in args)
+        print(f"[{timestamp}] {content}", **kwargs, flush=True)
+    else:
+        print(f"[{timestamp}]", **kwargs, flush=True)
+
+
+def thread_safe_print(*args, **kwargs):
+    """
+    线程安全的打印函数，自动添加时间戳，立即刷新输出
+    
+    Args:
+        *args: 要打印的内容
+        **kwargs: print函数的其他参数
+    """
+    with _print_lock:
+        log_print(*args, **kwargs)
+
+
+# User-Agent 池，模拟不同浏览器
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+]
+
+
+class ZaoHaoWuCrawler:
+    def __init__(self, cookie: str = "", cookies: Optional[List[str]] = None, thread_id: Optional[int] = None, max_votes_per_day: int = 10):
+        """
+        初始化爬虫
+        
+        Args:
+            cookie: 单个 Cookie（已废弃，建议使用 cookies）
+            cookies: Cookie 列表，支持轮换使用
+            thread_id: 线程ID，用于标识不同的并发任务
+            max_votes_per_day: 每天最大投票数（默认10次）
+        """
+        # 支持多个Cookie
+        if cookies:
+            self.cookies = cookies
+            self.current_cookie_index = 0
+        elif cookie:
+            self.cookies = [cookie]
+            self.current_cookie_index = 0
+        else:
+            self.cookies = []
+            self.current_cookie_index = 0
+        
+        self.thread_id = thread_id
+        self.thread_prefix = f"[线程{thread_id}]" if thread_id is not None else ""
+        self.base_url = "https://zaohaowu.com"
+        self.max_votes_per_day = max_votes_per_day
+        self.script_dir = Path(__file__).parent
+        self.today = datetime.now().strftime("%Y-%m-%d")
+        self._update_headers()
+        
+        # 创建HTTP客户端，使用连接池（每个线程独立的客户端）
+        self.client = httpx.Client(
+            timeout=30.0,
+            follow_redirects=True,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+        )
+    
+    def _get_random_user_agent(self) -> str:
+        """获取随机User-Agent"""
+        return random.choice(USER_AGENTS)
+    
+    def _get_current_cookie(self) -> str:
+        """获取当前使用的Cookie"""
+        if not self.cookies:
+            return ""
+        return self.cookies[self.current_cookie_index]
+    
+    def _get_vote_count_file(self) -> Path:
+        """获取投票计数文件路径"""
+        cookie = self._get_current_cookie()
+        cookie_id = hashlib.md5(cookie.encode()).hexdigest()[:8]
+        return self.script_dir / f"vote_count_{cookie_id}.json"
+    
+    def _get_today_vote_count(self) -> int:
+        """获取今日投票次数"""
+        vote_file = self._get_vote_count_file()
+        with _vote_count_lock:
+            if vote_file.exists():
+                try:
+                    with open(vote_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        if data.get("date") == self.today:
+                            return data.get("count", 0)
+                except Exception:
+                    pass
+            return 0
+    
+    def _increment_vote_count(self) -> bool:
+        """增加投票计数，返回是否成功（未超过限制）"""
+        vote_file = self._get_vote_count_file()
+        current_count = self._get_today_vote_count()
+        
+        if current_count >= self.max_votes_per_day:
+            return False
+        
+        with _vote_count_lock:
+            try:
+                with open(vote_file, 'w', encoding='utf-8') as f:
+                    json.dump({
+                        "date": self.today,
+                        "count": current_count + 1
+                    }, f, indent=2)
+                return True
+            except Exception as e:
+                log_print(f"⚠️  保存投票计数失败: {e}")
+                return False
+    
+    def _rotate_cookie(self):
+        """轮换到下一个Cookie"""
+        if len(self.cookies) > 1:
+            self.current_cookie_index = (self.current_cookie_index + 1) % len(self.cookies)
+            self._update_headers()
+            thread_safe_print(f"{self.thread_prefix} 🔄 切换到 Cookie #{self.current_cookie_index + 1}/{len(self.cookies)}")
+    
+    def _update_headers(self):
+        """更新请求头（包括随机User-Agent）"""
+        self.headers = {
+            "User-Agent": self._get_random_user_agent(),
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Content-Type": "application/json",
+            "Cookie": self._get_current_cookie(),
+            "Referer": "https://zaohaowu.com/",
+            "Origin": "https://zaohaowu.com",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "Connection": "keep-alive",
+        }
+    
+    def _random_delay(self, base_delay: float, variance: float = 0.3):
+        """
+        随机延迟，模拟人类行为
+        
+        Args:
+            base_delay: 基础延迟（秒）
+            variance: 延迟变化幅度（0-1之间）
+        """
+        # 在基础延迟上增加随机变化
+        min_delay = base_delay * (1 - variance)
+        max_delay = base_delay * (1 + variance)
+        delay = random.uniform(min_delay, max_delay)
+        time.sleep(delay)
+    
+    def get_user_info(self) -> Dict[str, Any]:
+        """
+        获取用户信息
+        
+        Returns:
+            用户信息响应数据
+        """
+        url = f"{self.base_url}/aigc/api/user/info"
+        params = {"_timer": int(time.time() * 1000)}
+        
+        try:
+            # 每次请求前更新请求头（随机User-Agent）
+            self._update_headers()
+            response = self.client.get(url, params=params, headers=self.headers)
+            response.raise_for_status()
+            result = response.json()
+            
+            # 检查是否需要切换Cookie
+            if result.get("code") == 401:
+                thread_safe_print(f"{self.thread_prefix} ⚠️  Cookie可能已过期，尝试切换Cookie...")
+                self._rotate_cookie()
+                # 重试一次
+                self._update_headers()
+                response = self.client.get(url, params=params, headers=self.headers)
+                response.raise_for_status()
+                result = response.json()
+            
+            thread_safe_print(f"{self.thread_prefix} ✓ 用户信息接口调用成功")
+            return result
+        except Exception as e:
+            thread_safe_print(f"{self.thread_prefix} ✗ 用户信息接口调用失败: {e}")
+            raise
+    
+    def get_ranking_want(self, limit: int = 40, want_it_ranking_type: int = 2) -> List[Dict[str, Any]]:
+        """
+        获取排行榜数据
+        
+        Args:
+            limit: 返回数量限制
+            want_it_ranking_type: 排行榜类型
+            
+        Returns:
+            排行榜数据列表
+        """
+        url = f"{self.base_url}/aigc/api/ranking/want"
+        params = {
+            "limit": limit,
+            "wantItRankingType": want_it_ranking_type
+        }
+        
+        try:
+            # 每次请求前更新请求头（随机User-Agent）
+            self._update_headers()
+            response = self.client.get(url, params=params, headers=self.headers)
+            response.raise_for_status()
+            result = response.json()
+            
+            # 检查是否需要切换Cookie
+            if result.get("code") == 401:
+                thread_safe_print(f"{self.thread_prefix} ⚠️  Cookie可能已过期，尝试切换Cookie...")
+                self._rotate_cookie()
+                # 重试一次
+                self._update_headers()
+                response = self.client.get(url, params=params, headers=self.headers)
+                response.raise_for_status()
+                result = response.json()
+            
+            # 提取数据列表：数据结构为 {code, msg, data: {dataList: [...]}}
+            if isinstance(result, dict) and result.get("code") == 200:
+                data = result.get("data", {}).get("dataList", [])
+            else:
+                data = []
+            
+            thread_safe_print(f"{self.thread_prefix} ✓ 排行榜接口调用成功，获取到 {len(data)} 条数据")
+            return data
+        except Exception as e:
+            thread_safe_print(f"{self.thread_prefix} ✗ 排行榜接口调用失败: {e}")
+            raise
+    
+    def extract_unique_content_ids(self, ranking_data: List[Dict[str, Any]]) -> List[str]:
+        """
+        从排行榜数据中提取 uniqueContentId
+        
+        Args:
+            ranking_data: 排行榜数据列表（dataList）
+            
+        Returns:
+            uniqueContentId 列表
+        """
+        content_ids = []
+        for item in ranking_data:
+            # 数据结构中直接包含 uniqueContentId 字段
+            content_id = item.get("uniqueContentId")
+            if content_id:
+                content_ids.append(content_id)
+        
+        thread_safe_print(f"{self.thread_prefix} ✓ 提取到 {len(content_ids)} 个 uniqueContentId")
+        return content_ids
+    
+    def send_want_request(self, content_id: str) -> Dict[str, Any]:
+        """
+        发送 want 请求（带每日投票限制检查）
+        
+        Args:
+            content_id: 内容ID
+            
+        Returns:
+            请求响应数据
+        """
+        # 检查今日投票限制
+        current_count = self._get_today_vote_count()
+        if current_count >= self.max_votes_per_day:
+            thread_safe_print(f"{self.thread_prefix} ⚠️  今日投票次数已达上限（{current_count}/{self.max_votes_per_day}），跳过")
+            return {"success": False, "error": "已达每日投票上限", "code": 429, "skipped": True}
+        
+        url = f"{self.base_url}/aigc/api/topic/content/want"
+        payload = {
+            "contentId": content_id
+        }
+        
+        try:
+            # 每次请求前更新请求头（随机User-Agent）
+            self._update_headers()
+            response = self.client.post(url, json=payload, headers=self.headers)
+            response.raise_for_status()
+            result = response.json()
+            
+            # 如果返回401，尝试切换Cookie并重试
+            if result.get("code") == 401:
+                thread_safe_print(f"{self.thread_prefix} ⚠️  Cookie可能已过期，尝试切换Cookie...")
+                self._rotate_cookie()
+                self._update_headers()
+                response = self.client.post(url, json=payload, headers=self.headers)
+                response.raise_for_status()
+                result = response.json()
+            
+            # 投票成功，增加计数
+            if result.get("code") == 200 or result.get("success") is not False:
+                if self._increment_vote_count():
+                    new_count = self._get_today_vote_count()
+                    remaining = self.max_votes_per_day - new_count
+                    thread_safe_print(f"{self.thread_prefix}   今日已投票: {new_count}/{self.max_votes_per_day}, 剩余: {remaining}")
+            
+            return result
+        except httpx.HTTPStatusError as e:
+            # 处理 HTTP 错误（如 401 登录过期）
+            error_msg = f"HTTP {e.response.status_code}"
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("msg", error_msg)
+            except:
+                pass
+            thread_safe_print(f"{self.thread_prefix} ✗ 请求失败 (contentId: {content_id}): {error_msg}")
+            return {"success": False, "error": error_msg, "code": e.response.status_code}
+        except Exception as e:
+            thread_safe_print(f"{self.thread_prefix} ✗ 请求异常 (contentId: {content_id}): {e}")
+            return {"success": False, "error": str(e)}
+    
+    def run(self, limit: int = 40, want_it_ranking_type: int = 2, delay: float = 0.5) -> Dict[str, Any]:
+        """
+        执行完整的爬虫流程
+        
+        Args:
+            limit: 排行榜返回数量限制
+            want_it_ranking_type: 排行榜类型
+            delay: 每次请求之间的延迟（秒）
+            
+        Returns:
+            执行结果统计
+        """
+        thread_safe_print(f"{self.thread_prefix} " + "=" * 50)
+        thread_safe_print(f"{self.thread_prefix} 早好物爬虫开始运行")
+        thread_safe_print(f"{self.thread_prefix} " + "=" * 50)
+        
+        # 步骤1: 调用用户信息接口
+        thread_safe_print(f"{self.thread_prefix} \n[步骤 1] 调用用户信息接口...")
+        try:
+            self.get_user_info()
+        except Exception as e:
+            thread_safe_print(f"{self.thread_prefix} 警告: 用户信息接口调用失败，继续执行: {e}")
+        
+        # 步骤2: 等待（使用随机延迟，模拟人类操作）
+        thread_safe_print(f"{self.thread_prefix} \n[步骤 2] 等待中...")
+        self._random_delay(2.0, variance=0.3)  # 2秒 ± 30%，模拟人类操作间隔
+        
+        # 步骤3: 获取排行榜数据
+        thread_safe_print(f"{self.thread_prefix} \n[步骤 3] 获取排行榜数据...")
+        ranking_data = self.get_ranking_want(limit, want_it_ranking_type)
+        
+        if not ranking_data:
+            thread_safe_print(f"{self.thread_prefix} ✗ 未获取到排行榜数据，退出")
+            return {"total": 0, "success": 0, "fail": 0}
+        
+        # 步骤4: 提取 uniqueContentId
+        thread_safe_print(f"{self.thread_prefix} \n[步骤 4] 提取 uniqueContentId...")
+        content_ids = self.extract_unique_content_ids(ranking_data)
+        
+        if not content_ids:
+            thread_safe_print(f"{self.thread_prefix} ✗ 未提取到任何 contentId，退出")
+            return {"total": 0, "success": 0, "fail": 0}
+        
+        # 步骤5: 批量发送 want 请求
+        current_vote_count = self._get_today_vote_count()
+        remaining_votes = max(0, self.max_votes_per_day - current_vote_count)
+        
+        thread_safe_print(f"{self.thread_prefix} \n[步骤 5] 开始批量发送 want 请求")
+        thread_safe_print(f"{self.thread_prefix} 今日已投票: {current_vote_count}/{self.max_votes_per_day}, 剩余可投票: {remaining_votes} 次")
+        thread_safe_print(f"{self.thread_prefix} 待处理: {len(content_ids)} 个")
+        
+        if remaining_votes <= 0:
+            thread_safe_print(f"{self.thread_prefix} ⚠️  今日投票次数已达上限，跳过所有请求")
+            return {
+                "total": len(content_ids),
+                "success": 0,
+                "fail": 0,
+                "skipped": len(content_ids)
+            }
+        
+        # 限制处理数量不超过剩余可投票数
+        content_ids_to_process = content_ids[:remaining_votes]
+        skipped_count = len(content_ids) - len(content_ids_to_process)
+        
+        if skipped_count > 0:
+            thread_safe_print(f"{self.thread_prefix} ⚠️  将跳过 {skipped_count} 个请求（超过每日限制）")
+        
+        success_count = 0
+        fail_count = 0
+        skipped_count_actual = 0
+        
+        for i, content_id in enumerate(content_ids_to_process, 1):
+            thread_safe_print(f"{self.thread_prefix} \n[{i}/{len(content_ids_to_process)}] 处理 contentId: {content_id}")
+            result = self.send_want_request(content_id)
+            
+            if result.get("skipped"):
+                skipped_count_actual += 1
+                thread_safe_print(f"{self.thread_prefix}   ⏭️  跳过（已达每日限制）")
+            elif result.get("success") is not False and result.get("code") != 401:
+                success_count += 1
+                thread_safe_print(f"{self.thread_prefix}   ✓ 成功")
+            else:
+                fail_count += 1
+                thread_safe_print(f"{self.thread_prefix}   ✗ 失败: {result.get('msg', result.get('error', '未知错误'))}")
+            
+            # 随机延迟，避免请求过快（模拟人类行为）
+            if i < len(content_ids_to_process):
+                # 在基础延迟上增加随机变化，模拟人类操作的不规律性
+                self._random_delay(delay, variance=0.4)
+        
+        # 统计结果
+        final_vote_count = self._get_today_vote_count()
+        thread_safe_print(f"{self.thread_prefix} \n" + "=" * 50)
+        thread_safe_print(f"{self.thread_prefix} 爬虫执行完成")
+        thread_safe_print(f"{self.thread_prefix} " + "=" * 50)
+        thread_safe_print(f"{self.thread_prefix} 总计: {len(content_ids)} 个")
+        thread_safe_print(f"{self.thread_prefix} 成功: {success_count} 个")
+        thread_safe_print(f"{self.thread_prefix} 失败: {fail_count} 个")
+        if skipped_count > 0 or skipped_count_actual > 0:
+            thread_safe_print(f"{self.thread_prefix} 跳过: {skipped_count + skipped_count_actual} 个（超过每日限制）")
+        thread_safe_print(f"{self.thread_prefix} 今日总投票: {final_vote_count}/{self.max_votes_per_day}")
+        thread_safe_print(f"{self.thread_prefix} " + "=" * 50)
+        
+        return {
+            "total": len(content_ids),
+            "success": success_count,
+            "fail": fail_count,
+            "skipped": skipped_count + skipped_count_actual
+        }
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.client.close()
+
+
+def load_config_from_file(file_path: str = "cookies.json") -> Dict[str, Any]:
+    """
+    从配置文件加载配置（包括Cookie和定时任务设置）
+    
+    Args:
+        file_path: 配置文件路径（相对于脚本目录）
+        
+    Returns:
+        配置字典，包含 cookies 和 schedule
+    """
+    script_dir = Path(__file__).parent
+    config_file = script_dir / file_path
+    
+    if not config_file.exists():
+        log_print(f"⚠️  配置文件不存在: {config_file}")
+        return {"cookies": [], "schedule": {"enabled": True, "start_hour": 7, "end_hour": 9}}
+    
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+            # 提取Cookie列表
+            cookies = data.get("cookies", [])
+            if cookies:
+                log_print(f"✓ 从配置文件加载了 {len(cookies)} 个Cookie")
+            else:
+                log_print("⚠️  配置文件中没有找到Cookie")
+            
+            # 提取定时任务配置
+            schedule = data.get("schedule", {})
+            schedule_enabled = schedule.get("enabled", True)
+            schedule_start_hour = schedule.get("start_hour", 7)
+            schedule_end_hour = schedule.get("end_hour", 9)
+            
+            log_print(f"✓ 定时任务配置: enabled={schedule_enabled}, 运行时间={schedule_start_hour}:00-{schedule_end_hour}:00")
+            
+            # 提取投票限制配置
+            max_votes_per_day = data.get("max_votes_per_day", 10)
+            log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes_per_day} 次")
+            
+            return {
+                "cookies": cookies,
+                "schedule": {
+                    "enabled": schedule_enabled,
+                    "start_hour": schedule_start_hour,
+                    "end_hour": schedule_end_hour
+                },
+                "max_votes_per_day": max_votes_per_day
+            }
+    except json.JSONDecodeError as e:
+        log_print(f"✗ 配置文件格式错误: {e}")
+        return {"cookies": [], "schedule": {"enabled": True, "start_hour": 7, "end_hour": 9}, "max_votes_per_day": 10}
+    except Exception as e:
+        log_print(f"✗ 读取配置文件失败: {e}")
+        return {"cookies": [], "schedule": {"enabled": True, "start_hour": 7, "end_hour": 9}, "max_votes_per_day": 10}
+
+
+def load_cookies_from_file(file_path: str = "cookies.json") -> List[str]:
+    """
+    从配置文件加载Cookie列表（兼容旧接口）
+    
+    Args:
+        file_path: Cookie配置文件路径（相对于脚本目录）
+        
+    Returns:
+        Cookie列表
+    """
+    config = load_config_from_file(file_path)
+    return config.get("cookies", [])
+
+
+def run_single_cookie(cookie: str, thread_id: int, limit: int = 40, want_it_ranking_type: int = 2, delay: float = 0.5, max_votes_per_day: int = 10) -> Dict[str, Any]:
+    """
+    使用单个Cookie运行爬虫（用于并发执行）
+    
+    Args:
+        cookie: 单个Cookie
+        thread_id: 线程ID
+        limit: 排行榜返回数量限制
+        want_it_ranking_type: 排行榜类型
+        delay: 每次请求之间的延迟（秒）
+        max_votes_per_day: 每天最大投票数（默认10次）
+        
+    Returns:
+        执行结果统计
+    """
+    try:
+        with ZaoHaoWuCrawler(cookie=cookie, thread_id=thread_id, max_votes_per_day=max_votes_per_day) as crawler:
+            result = crawler.run(
+                limit=limit,
+                want_it_ranking_type=want_it_ranking_type,
+                delay=delay
+            )
+            return result
+    except Exception as e:
+        thread_safe_print(f"[线程{thread_id}] ✗ 执行异常: {e}")
+        return {"total": 0, "success": 0, "fail": 0, "error": str(e)}
+
+
+def wait_until_time(target_hour: int, target_minute: int = 0):
+    """
+    等待到指定时间
+    
+    Args:
+        target_hour: 目标小时（0-23）
+        target_minute: 目标分钟（0-59）
+    """
+    now = datetime.now()
+    target_time = now.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
+    
+    # 如果目标时间已过，则设置为明天
+    if target_time <= now:
+        target_time += timedelta(days=1)
+    
+    wait_seconds = (target_time - now).total_seconds()
+    wait_hours = wait_seconds / 3600
+    
+    log_print(f"⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"⏰ 目标时间: {target_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"⏰ 等待时间: {wait_hours:.2f} 小时 ({wait_seconds:.0f} 秒)")
+    log_print("⏰ 等待中...")
+    
+    time.sleep(wait_seconds)
+    log_print(f"✓ 到达目标时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+
+def get_random_time_in_range(start_hour: int, end_hour: int) -> datetime:
+    """
+    在指定时间范围内生成随机时间
+    
+    Args:
+        start_hour: 开始小时（0-23）
+        end_hour: 结束小时（0-23）
+        
+    Returns:
+        随机时间（datetime对象）
+    """
+    now = datetime.now()
+    
+    # 生成随机的小时和分钟
+    random_hour = random.randint(start_hour, end_hour - 1)
+    random_minute = random.randint(0, 59)
+    random_second = random.randint(0, 59)
+    
+    target_time = now.replace(hour=random_hour, minute=random_minute, second=random_second, microsecond=0)
+    
+    # 如果时间已过，设置为明天
+    if target_time <= now:
+        target_time += timedelta(days=1)
+    
+    return target_time
+
+
+def is_in_time_range(start_hour: int, end_hour: int) -> bool:
+    """
+    检查当前时间是否在指定范围内
+    
+    Args:
+        start_hour: 开始小时（0-23）
+        end_hour: 结束小时（0-23）
+        
+    Returns:
+        是否在时间范围内
+    """
+    now = datetime.now()
+    current_hour = now.hour
+    return start_hour <= current_hour < end_hour
+
+
+def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None, end_hour: Optional[int] = None):
+    """
+    主函数
+    Cookie和定时任务配置从 cookies.json 文件中读取
+    支持多Cookie并发执行，互不影响
+    
+    Args:
+        schedule_mode: 是否启用定时任务模式（None表示从配置文件读取）
+        start_hour: 定时任务开始小时（None表示从配置文件读取）
+        end_hour: 定时任务结束小时（None表示从配置文件读取）
+    """
+    # 从配置文件加载配置
+    config = load_config_from_file("cookies.json")
+    cookies = config.get("cookies", [])
+    schedule_config = config.get("schedule", {})
+    max_votes_per_day = config.get("max_votes_per_day", 10)
+    
+    # 使用配置文件的值，如果参数提供了则使用参数值（参数优先级更高）
+    schedule_enabled = schedule_mode if schedule_mode is not None else schedule_config.get("enabled", True)
+    schedule_start_hour = start_hour if start_hour is not None else schedule_config.get("start_hour", 7)
+    schedule_end_hour = end_hour if end_hour is not None else schedule_config.get("end_hour", 9)
+    
+    # 定时任务模式
+    if schedule_enabled:
+        log_print("=" * 60)
+        log_print("定时任务模式已启用")
+        log_print(f"运行时间范围: {schedule_start_hour}:00 - {schedule_end_hour}:00")
+        log_print("=" * 60)
+        
+        # 检查当前时间是否在运行时间范围内
+        now = datetime.now()
+        current_hour = now.hour
+        
+        if not is_in_time_range(schedule_start_hour, schedule_end_hour):
+            log_print(f"\n⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+            log_print(f"⏰ 不在运行时间范围内（{schedule_start_hour}:00 - {schedule_end_hour}:00）")
+            
+            # 生成随机运行时间（在指定时间范围内）
+            random_time = get_random_time_in_range(schedule_start_hour, schedule_end_hour)
+            log_print(f"⏰ 将在 {random_time.strftime('%Y-%m-%d %H:%M:%S')} 随机运行")
+            
+            # 等待到随机时间
+            wait_until_time(random_time.hour, random_time.minute)
+        else:
+            # 在时间范围内，计算到结束时间还剩多少时间
+            end_time = now.replace(hour=schedule_end_hour, minute=0, second=0, microsecond=0)
+            remaining_seconds = (end_time - now).total_seconds()
+            remaining_minutes = int(remaining_seconds / 60)
+            
+            # 随机延迟，但不超过剩余时间（最多延迟30分钟或剩余时间的一半，取较小值）
+            max_delay_minutes = min(30, max(1, remaining_minutes // 2))
+            random_delay_minutes = random.randint(0, max_delay_minutes)
+            random_delay_seconds = random_delay_minutes * 60 + random.randint(0, 59)
+            
+            # 确保不会超过结束时间
+            if random_delay_seconds > remaining_seconds:
+                random_delay_seconds = max(0, int(remaining_seconds) - 60)  # 至少提前1分钟
+            
+            log_print(f"\n⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+            log_print(f"⏰ 在运行时间范围内（{schedule_start_hour}:00 - {schedule_end_hour}:00）")
+            log_print(f"⏰ 距离结束时间还有 {remaining_minutes} 分钟")
+            log_print(f"⏰ 随机延迟 {random_delay_minutes} 分钟后运行")
+            
+            if random_delay_seconds > 0:
+                log_print(f"⏰ 等待 {random_delay_seconds} 秒...")
+                time.sleep(random_delay_seconds)
+            
+            log_print(f"✓ 开始执行: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # 使用已加载的Cookie（已在函数开头加载）
+    
+    if not cookies:
+        log_print("\n⚠️  警告: 未找到有效的Cookie！")
+        log_print("请创建 cookies.json 文件并添加Cookie，格式如下：")
+        log_print("""
+{
+  "cookies": [
+    "你的Cookie1",
+    "你的Cookie2"
+  ]
+}
+        """)
+        return
+    
+    log_print(f"\n✓ 加载了 {len(cookies)} 个Cookie")
+    log_print(f"✓ 将使用 {len(cookies)} 个线程并发执行，互不影响")
+    log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes_per_day} 次\n")
+    
+    # 配置参数
+    limit = 40
+    want_it_ranking_type = 2
+    # 增加延迟时间，模拟真实人类操作速度（2-4秒之间随机）
+    delay = random.uniform(2.0, 4.0)  # 每次请求间隔2-4秒，更符合人类操作速度
+    
+    # 使用线程池并发执行
+    all_results = []
+    total_stats = {"total": 0, "success": 0, "fail": 0, "skipped": 0}
+    
+    with ThreadPoolExecutor(max_workers=len(cookies)) as executor:
+        # 提交所有任务
+        future_to_cookie = {
+            executor.submit(run_single_cookie, cookie, idx + 1, limit, want_it_ranking_type, delay, max_votes_per_day): (idx + 1, cookie)
+            for idx, cookie in enumerate(cookies)
+        }
+        
+        # 等待所有任务完成
+        for future in as_completed(future_to_cookie):
+            thread_id, cookie = future_to_cookie[future]
+            try:
+                result = future.result()
+                all_results.append({
+                    "thread_id": thread_id,
+                    "result": result
+                })
+                # 汇总统计
+                total_stats["total"] += result.get("total", 0)
+                total_stats["success"] += result.get("success", 0)
+                total_stats["fail"] += result.get("fail", 0)
+                total_stats["skipped"] += result.get("skipped", 0)
+            except Exception as e:
+                thread_safe_print(f"[线程{thread_id}] ✗ 任务执行异常: {e}")
+    
+    # 打印最终汇总结果
+    log_print("\n" + "=" * 60)
+    log_print("所有线程执行完成 - 最终统计")
+    log_print("=" * 60)
+    log_print(f"并发线程数: {len(cookies)}")
+    log_print(f"总计处理: {total_stats['total']} 个")
+    log_print(f"成功: {total_stats['success']} 个")
+    log_print(f"失败: {total_stats['fail']} 个")
+    if total_stats.get('skipped', 0) > 0:
+        log_print(f"跳过: {total_stats['skipped']} 个（超过每日限制）")
+    if total_stats['total'] > 0:
+        success_rate = (total_stats['success'] / total_stats['total']) * 100
+        log_print(f"成功率: {success_rate:.2f}%")
+    log_print("=" * 60)
+    
+    # 打印每个线程的详细结果
+    log_print("\n各线程执行详情:")
+    for item in all_results:
+        thread_id = item["thread_id"]
+        result = item["result"]
+        skipped_info = f", 跳过={result.get('skipped', 0)}" if result.get('skipped', 0) > 0 else ""
+        log_print(f"  线程{thread_id}: 总计={result.get('total', 0)}, "
+              f"成功={result.get('success', 0)}, 失败={result.get('fail', 0)}{skipped_info}")
+
+
+if __name__ == "__main__":
+    # 从配置文件读取定时任务设置
+    # 如需覆盖配置，可以传入参数：
+    # main(schedule_mode=False)  # 立即执行，忽略配置文件
+    # main(start_hour=8, end_hour=10)  # 覆盖运行时间范围
+    main()
+

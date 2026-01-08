@@ -1,0 +1,14 @@
+{
+  "cookies": [
+    "JSESSIONID=073E4BE53B82A5DA21713B7BF3A64036; MM_AIGC_GUEST=fqPk1LDBotgwlzYP*h_SLgjkxuNZbX8H9Y3yZDPw1a3LA3xPq6LnOjsnhoauTaqtF1eTrpq2M0o2k2NqSt7qpZIy8flIlWzvzjcyG6u6ClAOJgFbbbCtvrdXSPSNcIir_SoTMrkTn2hdggzhboU2VhTLXdx7lc_kCbxjQxoVh-E93a8dwP9nW5MlqKeyG-M3iWS-YnRQhnk379bNL3lwT7jmLOgMXS1gQIfuyE5d0gd5JK5KJUzcA4sPBazUUJ32hwXnQwLajZfHXHgEarijQ6m1wOqEpRVvBJ_901ZOtuBh5EC1e-oqYQsro6suYuHKyOIwAw8ggMnpCpYDdvNGVRvEbkafH-1m7Jj24tw8GsOoK1aXvt2qk5GLR2IXyWxZyxqTlsr9cokTTsFxLWdyrcmAUmXc=*y-QX9jS9Ufc4Ku4e07Qvqu4pLVnAG-qVjoB4Z3cUj2g=; MM_AIGC=fuYhT1tP0qX9no7a*ZzuQizYjiu7Znb7gTWdcIyKf1-mmpzv-Law4TtvQaDcyMBjS7CaJmItrfri6neyFza2M-W4nb9NNx8QXJTW8_knIkvMTS3j93Z8lF_Iiulr9uD54UR0mMXhXOaII4zbHiR00qtXgjaoen4WJ7eKSnL-oDQkBIhDSjv43ed0_djgUaBZHsTzQriKq4cQF2xtj-WyVeMAmX-dM5dYS5lBTCUT0-hj1gMYxNZxE3iGNMfKsQFqAPtRD5-DAztfdc0cWLu04TA33AEpBBuertYLHApIhR9iN0CwlDjHs51_uqsE7Nz7A9XLHRFBkmTZP-ylf6nijJ4hwn7whouVUj_nSvaqOcA7n_mPH3UDsEVYal9E_879KUqwnxQ==*IGkEaRBLjMTHmXIv-hJ-jhn1P1CdVryIVEr6ErnM8D8=; JSESSIONID=8F4EF5E346E8EAF48E6CFEBA2ECA9E39"
+  ],
+  "schedule": {
+    "enabled": true,
+    "start_hour": 7,
+    "end_hour": 9,
+    "note": "定时任务配置：enabled=true启用定时任务，start_hour和end_hour设置运行时间范围（24小时制，0-23）"
+  },
+  "max_votes_per_day": 10,
+  "note": "在此文件中添加多个Cookie，每行一个。支持Cookie轮换使用。max_votes_per_day为每个Cookie每天最多投票次数。"
+}
+
