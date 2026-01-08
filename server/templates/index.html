@@ -96,6 +96,12 @@
       "position": 15,
       "name": "QR Code Generator",
       "url": "https://mediatoolbox.com/tools/qrcode"
+    },
+    {
+      "@type": "ListItem",
+      "position": 16,
+      "name": "Calligraphy Generator",
+      "url": "https://mediatoolbox.com/tools/zitie-new"
     }
   ]
 }
@@ -103,11 +109,18 @@
 {% endblock %}
 <div class="py-6">
     <!-- Category: Media Tools -->
-    <div class="mb-8">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span class="w-1 h-5 bg-primary rounded-full mr-2"></span>
-            媒体处理
-        </h2>
+    <div class="mb-6 bg-white/70 backdrop-blur-lg rounded-2xl p-6 shadow-xl border border-white/30">
+        <!-- Category Header -->
+        <div class="mb-5 pb-4 border-b-2 border-blue-200">
+            <h2 class="text-2xl font-bold text-blue-900 flex items-center">
+                <svg class="w-7 h-7 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span>📁 媒体处理</span>
+            </h2>
+        </div>
+        <!-- Tools Grid -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <!-- PDF Compress -->
             <div
@@ -226,11 +239,18 @@
     </div>
 
     <!-- Category: Dev Tools -->
-    <div class="mb-8">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span class="w-1 h-5 bg-secondary rounded-full mr-2"></span>
-            开发工具
-        </h2>
+    <div class="mb-6 bg-white/70 backdrop-blur-lg rounded-2xl p-6 shadow-xl border border-white/30">
+        <!-- Category Header -->
+        <div class="mb-5 pb-4 border-b-2 border-green-200">
+            <h2 class="text-2xl font-bold text-green-900 flex items-center">
+                <svg class="w-7 h-7 mr-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+                <span>💻 开发工具</span>
+            </h2>
+        </div>
+        <!-- Tools Grid -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <!-- JSON Formatter -->
             <div
@@ -273,6 +293,28 @@
                     <a href="/tools/base64" class="absolute inset-0 z-10"></a>
                 </div>
             </div>
+
+            <!-- Base64 to Image -->
+            <div
+                class="tool-card group relative glass p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="absolute top-3 right-3">
+                    <span
+                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-cyan-50 text-cyan-700">NEW</span>
+                </div>
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-cyan-500 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">Base64 转图片</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">Base64 解码为图片，支持预览下载。</dd>
+                    <a href="/tools/base64-to-image" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
 
             <!-- UUID -->
             <div
@@ -339,11 +381,18 @@
     </div>
 
     <!-- Category: Utilities -->
-    <div class="mb-8">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span class="w-1 h-5 bg-pink-500 rounded-full mr-2"></span>
-            实用工具
-        </h2>
+    <div class="mb-6 bg-white/70 backdrop-blur-lg rounded-2xl p-6 shadow-xl border border-white/30">
+        <!-- Category Header -->
+        <div class="mb-5 pb-4 border-b-2 border-pink-200">
+            <h2 class="text-2xl font-bold text-pink-900 flex items-center">
+                <svg class="w-7 h-7 mr-3 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <span>🛠️ 实用工具</span>
+            </h2>
+        </div>
+        <!-- Tools Grid -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <!-- Timestamp -->
             <div
@@ -376,6 +425,27 @@
                     <dt class="text-base font-bold text-gray-900 mb-1">二维码生成</dt>
                     <dd class="text-xs text-gray-500 leading-relaxed">快速生成文本或链接的二维码。</dd>
                     <a href="/tools/qrcode" class="absolute inset-0 z-10"></a>
+                </div>
+            </div>
+
+            <!-- Copybook (New) -->
+            <div
+                class="tool-card group relative glass p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-transparent">
+                <div class="absolute top-3 right-3">
+                    <span
+                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700">NEW</span>
+                </div>
+                <div class="flex flex-col h-full">
+                    <div class="mb-3">
+                        <svg class="h-8 w-8 text-green-700 group-hover:scale-110 transition-transform duration-300"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M12 6v12m6-6H6m14 0a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h12a2 2 0 012 2v4z" />
+                        </svg>
+                    </div>
+                    <dt class="text-base font-bold text-gray-900 mb-1">字帖生成</dt>
+                    <dd class="text-xs text-gray-500 leading-relaxed">按模板/年级生成 A4 可打印字帖。</dd>
+                    <a href="/tools/zitie-new" class="absolute inset-0 z-10"></a>
                 </div>
             </div>
         </div>

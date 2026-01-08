@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Base64 转图片 - 在线工具{% endblock %}
+{% block description %}在线 Base64 转图片工具，支持 PNG、JPEG、GIF、WEBP 等格式，实时预览和下载。{% endblock %}
+{% block keywords %}Base64转图片, Base64解码, 图片解码, Base64 to Image, 在线转换{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Page Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">🖼️ Base64 转图片</h1>
+        <p class="text-gray-600">将 Base64 编码转换为图片，支持实时预览和下载</p>
+    </div>
+
+    <!-- Main Container -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Left: Input Area -->
+        <div class="glass rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Base64 输入</h2>
+
+            <!-- Base64 Input Textarea -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">粘贴 Base64 字符串</label>
+                <textarea id="base64-input"
+                    class="w-full h-96 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                    placeholder="粘贴 Base64 编码...&#10;&#10;支持格式：&#10;1. 纯 Base64: iVBORw0KGgoAAAANSUhEU...&#10;2. Data URL: data:image/png;base64,iVBORw0KGgo..."></textarea>
+                <p class="mt-2 text-xs text-gray-500">
+                    提示：支持带或不带 Data URL 前缀
+                </p>
+            </div>
+
+            <!-- Filename Input -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">文件名（可选）</label>
+                <input type="text" id="filename-input" value="image"
+                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="image">
+                <p class="mt-1 text-xs text-gray-500">文件扩展名会自动添加</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button id="convert-btn"
+                    class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md font-medium">
+                    🔄 转换预览
+                </button>
+                <button id="clear-btn"
+                    class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                    🗑️ 清空
+                </button>
+            </div>
+
+            <!-- Sample Button -->
+            <button id="sample-btn"
+                class="w-full mt-3 text-sm text-blue-600 hover:text-blue-700 py-2 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors">
+                📝 加载示例 Base64
+            </button>
+        </div>
+
+        <!-- Right: Preview Area -->
+        <div class="glass rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">图片预览</h2>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="text-center py-20">
+                <svg class="mx-auto h-16 w-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                    </path>
+                </svg>
+                <p class="text-gray-400">输入 Base64 后将显示预览</p>
+            </div>
+
+            <!-- Preview Container -->
+            <div id="preview-container" class="hidden">
+                <!-- Image Preview -->
+                <div class="mb-4 bg-gray-50 rounded-lg p-4 flex items-center justify-center min-h-[400px]">
+                    <img id="preview-image" class="max-w-full max-h-[500px] rounded shadow-lg" alt="Preview">
+                </div>
+
+                <!-- Image Info -->
+                <div id="image-info" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                    <div class="grid grid-cols-2 gap-2 text-gray-700">
+                        <div>
+                            <span class="font-medium">格式：</span>
+                            <span id="info-format">-</span>
+                        </div>
+                        <div>
+                            <span class="font-medium">大小：</span>
+                            <span id="info-size">-</span>
+                        </div>
+                        <div>
+                            <span class="font-medium">宽度：</span>
+                            <span id="info-width">-</span> px
+                        </div>
+                        <div>
+                            <span class="font-medium">高度：</span>
+                            <span id="info-height">-</span> px
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Button -->
+                <button id="download-btn"
+                    class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md font-medium">
+                    📥 下载图片
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="hidden text-center py-20">
+                <div
+                    class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-500">
+                </div>
+                <p class="mt-3 text-gray-600">正在转换...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="glass rounded-xl p-6 mt-6">
+        <h3 class="text-lg font-semibold mb-3 text-gray-800">💡 使用说明</h3>
+        <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 text-gray-700 text-sm">
+            <li class="flex items-start">
+                <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <span>支持带或不带 Data URL 前缀的 Base64</span>
+            </li>
+            <li class="flex items-start">
+                <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <span>支持 PNG、JPEG、GIF、WEBP 等格式</span>
+            </li>
+            <li class="flex items-start">
+                <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <span>实时预览图片尺寸和格式信息</span>
+            </li>
+            <li class="flex items-start">
+                <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <span>所有处理在本地完成，保护您的隐私</span>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const base64Input = document.getElementById('base64-input');
+    const filenameInput = document.getElementById('filename-input');
+    const convertBtn = document.getElementById('convert-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const sampleBtn = document.getElementById('sample-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const emptyState = document.getElementById('empty-state');
+    const previewContainer = document.getElementById('preview-container');
+    const previewImage = document.getElementById('preview-image');
+    const loading = document.getElementById('loading');
+
+    let currentImageBlob = null;
+
+    // 示例 Base64 (一个小的红色方块图片)
+    const sampleBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC';
+
+    // 加载示例
+    sampleBtn.addEventListener('click', () => {
+        base64Input.value = sampleBase64;
+    });
+
+    // 清空
+    clearBtn.addEventListener('click', () => {
+        base64Input.value = '';
+        filenameInput.value = 'image';
+        emptyState.classList.remove('hidden');
+        previewContainer.classList.add('hidden');
+        currentImageBlob = null;
+    });
+
+    // 转换预览（纯前端）
+    convertBtn.addEventListener('click', async () => {
+        const base64String = base64Input.value.trim();
+
+        if (!base64String) {
+            alert('请输入 Base64 字符串');
+            return;
+        }
+
+        loading.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        previewContainer.classList.add('hidden');
+
+        try {
+            // 直接在前端预览（不需要调用后端）
+            let dataUrl = base64String;
+
+            // 如果不是 data URL 格式，添加前缀
+            if (!dataUrl.startsWith('data:')) {
+                dataUrl = 'data:image/png;base64,' + base64String;
+            }
+
+            // 加载图片
+            const img = new Image();
+            img.onload = function () {
+                previewImage.src = dataUrl;
+
+                // 更新图片信息
+                document.getElementById('info-width').textContent = img.width;
+                document.getElementById('info-height').textContent = img.height;
+
+                // 从 data URL 中提取格式
+                const formatMatch = dataUrl.match(/data:image\/([a-z]+);/);
+                const format = formatMatch ? formatMatch[1].toUpperCase() : 'PNG';
+                document.getElementById('info-format').textContent = format;
+
+                // 计算大小
+                const base64Length = base64String.replace(/^data:image\/[a-z]+;base64,/, '').length;
+                const sizeInBytes = Math.ceil(base64Length * 0.75);
+                const sizeInKB = (sizeInBytes / 1024).toFixed(2);
+                document.getElementById('info-size').textContent = sizeInKB + ' KB';
+
+                // 显示预览
+                loading.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+
+                // 保存当前图片的 blob（用于下载）
+                fetch(dataUrl)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        currentImageBlob = blob;
+                    });
+            };
+
+            img.onerror = function () {
+                loading.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                alert('无效的 Base64 图片数据');
+            };
+
+            img.src = dataUrl;
+
+        } catch (error) {
+            loading.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            console.error('Error:', error);
+            alert('转换失败: ' + error.message);
+        }
+    });
+
+    // 下载图片
+    downloadBtn.addEventListener('click', async () => {
+        if (!currentImageBlob) {
+            alert('请先转换图片');
+            return;
+        }
+
+        const filename = filenameInput.value || 'image';
+        const format = document.getElementById('info-format').textContent.toLowerCase();
+        const ext = format === 'jpeg' ? 'jpg' : format;
+
+        const url = URL.createObjectURL(currentImageBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // 支持键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'Enter') {
+            convertBtn.click();
+        }
+    });
+</script>
+{% endblock %}

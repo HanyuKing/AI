@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from server.core.config import settings
 from server.core.exceptions import global_exception_handler
@@ -109,6 +109,24 @@ async def tool_id_photo(request: Request):
 async def tool_pixel_converter(request: Request):
     return templates.TemplateResponse("tools/pixel_converter.html", {"request": request})
 
+@app.get("/tools/base64-to-image", response_class=HTMLResponse)
+async def tool_base64_to_image(request: Request):
+    return templates.TemplateResponse("tools/base64_to_image.html", {"request": request})
+
+@app.get("/tools/zitie-new", response_class=HTMLResponse)
+async def tool_zitie_new(request: Request):
+    return templates.TemplateResponse("tools/zitie_new.html", {"request": request})
+
+@app.get("/tools/zitie-new/print", response_class=HTMLResponse)
+async def tool_zitie_new_print(request: Request):
+    # 已合并为“当前页面实时预览”，兼容旧链接直接跳回生成页
+    query = request.url.query
+    url = "/tools/zitie-new"
+    if query:
+        url = f"{url}?{query}"
+    return RedirectResponse(url=url, status_code=302)
+
+
 @app.get("/sitemap.xml", response_class=HTMLResponse)
 async def sitemap(request: Request):
     base_url = str(request.base_url).rstrip("/")
@@ -118,6 +136,9 @@ async def sitemap(request: Request):
         {"loc": f"{base_url}/tools/image-convert", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/json", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/base64", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/base64-to-image", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/calligraphy", "changefreq": "weekly", "priority": "0.8"},
+        {"loc": f"{base_url}/tools/zitie-new", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/uuid", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/timestamp", "changefreq": "weekly", "priority": "0.8"},
         {"loc": f"{base_url}/tools/qrcode", "changefreq": "weekly", "priority": "0.8"},

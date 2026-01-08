@@ -1,0 +1,851 @@
+{% extends "base.html" %}
+
+{% block title %}字帖生成 - 在线工具{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto mt-10">
+  <div class="glass shadow-lg rounded-lg overflow-hidden p-6 print:shadow-none print:border-none print:p-0">
+    <div class="flex flex-col lg:flex-row gap-6 items-start print:block">
+      <!-- Left Control Panel -->
+      <div class="w-full lg:w-80 shrink-0 flex flex-col gap-4 print:hidden">
+        
+        <!-- Content Card -->
+        <div class="glass shadow-sm rounded-lg p-5 border border-gray-100">
+          <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            内容设置
+          </h3>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">字帖标题</label>
+              <input type="text" id="zitieTitle" value="字帖练习" 
+                class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary text-sm">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">练习内容</label>
+              <textarea id="zitieText" rows="5"
+                class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary text-sm"
+                placeholder="输入汉字、词语或句子..."></textarea>
+              <div class="mt-2 flex flex-wrap gap-2">
+                 <button class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition-colors" type="button" onclick="fillExample('一二三十木禾')">基础字</button>
+                 <button class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition-colors" type="button" onclick="fillExample('春眠不觉晓处处闻啼鸟')">古诗</button>
+                 <button class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition-colors" type="button" onclick="fillExample('坚持练字，越来越好。')">句子</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Style Card -->
+        <div class="glass shadow-sm rounded-lg p-5 border border-gray-100">
+          <div class="flex items-center justify-between mb-3 cursor-pointer select-none" onclick="document.getElementById('styleOptions').classList.toggle('hidden'); document.getElementById('styleArrow').classList.toggle('rotate-180')">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+              <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+              样式选项
+            </h3>
+            <svg id="styleArrow" class="w-4 h-4 text-gray-400 transform transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          
+          <div id="styleOptions" class="space-y-4 hidden">
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">模板布局</label>
+              <div class="grid grid-cols-2 gap-2">
+                 <button type="button" class="border rounded px-2 py-1.5 text-sm text-center transition-colors border-primary bg-primary/5 text-primary font-medium" id="btnLayoutRow" onclick="setOpt('zitieLayout', 'row')">单字行练</button>
+                 <button type="button" class="border border-gray-200 rounded px-2 py-1.5 text-sm text-center text-gray-600 hover:bg-gray-50 transition-colors" id="btnLayoutPage" onclick="setOpt('zitieLayout', 'page')">整页通练</button>
+              </div>
+              <input type="hidden" id="zitieLayout" value="row">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">练习模式</label>
+              <select id="zitieMode" class="w-full border border-gray-300 rounded-md p-1.5 text-sm">
+                <option value="copy">临摹 (只显示首字)</option>
+                <option value="trace" selected>描红 (全显虚字)</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">格子类型</label>
+                <select id="zitieGrid" class="w-full border border-gray-300 rounded-md p-1.5 text-sm">
+                  <option value="mizi">米字格</option>
+                  <option value="tian" selected>田字格</option>
+                  <option value="huigong">回宫格</option>
+                  <option value="square">方格</option>
+                  <option value="none">无格线</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">字体选择</label>
+                <select id="zitieFont" class="w-full border border-gray-300 rounded-md p-1.5 text-sm">
+                  <option value="kaiti" selected>楷体</option>
+                  <option value="songti">宋体</option>
+                  <option value="heiti">黑体</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="repeatFillContainer" class="hidden">
+               <label class="flex items-center gap-2 text-sm text-gray-700">
+                 <input type="checkbox" id="zitieRepeatFill" class="rounded text-primary focus:ring-primary">
+                 <span>循环填充整页</span>
+               </label>
+            </div>
+
+            <div>
+               <label class="block text-xs font-medium text-gray-500 mb-1">参考字颜色</label>
+               <div class="flex items-center gap-2">
+                 <input type="color" id="zitieCharColor" value="#000000" class="h-8 w-12 p-0.5 border border-gray-300 rounded cursor-pointer">
+                 <span class="text-xs text-gray-400">点击调整颜色</span>
+               </div>
+            </div>
+            
+            <div class="pt-2 border-t border-gray-100">
+               <p class="text-[10px] text-gray-400 leading-relaxed">
+                 说明：A4标准尺寸，红色格线。字号与格宽已优化适配打印。
+               </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Card -->
+        <div class="glass shadow-sm rounded-lg p-5 border border-gray-100 text-center">
+           <button type="button" onclick="window.print()"
+            class="w-full py-2.5 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg hover:shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            打印 / 导出 PDF
+          </button>
+          <div class="mt-3 text-xs text-gray-500">
+            共 <span id="pageCount" class="font-bold text-gray-800 text-base">1</span> 页
+          </div>
+        </div>
+
+        <!-- QR Code Side -->
+        <div class="text-center mt-2">
+            <div class="inline-block p-2 bg-white rounded-lg shadow-sm border border-gray-100">
+               <img id="qrcodeImg" alt="QR" class="w-20 h-20 object-contain opacity-80" />
+            </div>
+            <div class="text-[10px] text-gray-400 mt-1">手机扫码练习</div>
+        </div>
+      </div>
+
+      <!-- Right Preview Area -->
+      <div class="flex-1 min-w-0 w-full print:w-auto print:flex-none">
+         <div id="pagesRoot" class="flex flex-col items-center gap-8 print:p-0 print:gap-0 print:block">
+           <!-- Pages will be rendered here -->
+         </div>
+      </div>
+    </div>
+
+<style>
+  :root {
+    --page-w: 210mm;
+    --page-h: 297mm;
+    --pad: 14mm;
+    --header-h: 14mm;
+    --grid-border-w: 0.90mm;
+    --char-opacity: 0.28;
+    --char-color-rgba: rgba(0, 0, 0, 1);
+    /* 文字视觉居中补偿（px） */
+    --char-shift-x: 0px;
+    --char-shift-y: 0px;
+  }
+
+  @media print {
+    @page { size: A4; margin: 0; }
+    
+    /* Hide standard site UI */
+    header, footer, #bing-bg, .print\:hidden { 
+      display: none !important; 
+    }
+
+    /* Reset Body/Main */
+    body { 
+      background: #fff !important; 
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    main {
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+      max-width: none !important;
+    }
+    
+    /* Reset containers path to #pagesRoot */
+    .max-w-6xl {
+        max-width: none !important;
+        margin: 0 !important;
+    }
+    .glass {
+        box-shadow: none !important;
+        background: none !important;
+        border: none !important;
+    }
+
+    /* Pages Container */
+    #pagesRoot {
+      display: block !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: transparent !important;
+    }
+
+    /* Page Item */
+    .page {
+      box-shadow: none !important;
+      margin: 0 auto !important;
+      break-after: page;
+      page-break-after: always;
+      position: relative !important;
+    }
+    .page:last-child {
+      break-after: auto;
+      page-break-after: auto;
+    }
+    
+    * { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+    }
+  }
+
+  .page {
+    width: var(--page-w);
+    height: var(--page-h);
+    background: #fff;
+    box-sizing: border-box;
+    padding: var(--pad);
+    position: relative;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .page-header {
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #111827;
+    margin-bottom: 2mm;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 4mm;
+  }
+
+  .header-qrcode {
+    width: 12mm;
+    height: 12mm;
+    object-fit: contain;
+    /* mix-blend-mode: multiply; */ /* Optional: to blend if background wasn't white */
+  }
+
+  .page-title { font-weight: 700; letter-spacing: 0.5px; }
+  .page-fields { color: #374151; white-space: nowrap; }
+
+  .page-footer {
+    position: absolute;
+    bottom: 8mm;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    color: #9ca3af;
+  }
+
+  .sheet {
+    display: grid;
+    gap: 0;
+    align-content: start;
+    justify-content: center;
+    margin: 0 auto;
+    position: relative;
+    background-color: #fff;
+  }
+
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .cell {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: transparent;
+    z-index: 1;
+    width: calc(var(--cell-mm) * 1mm);
+    height: calc(var(--cell-mm) * 1mm);
+  }
+
+  .cell .char {
+    /* 字略小一点，更接近常见字帖比例 */
+    font-size: calc(var(--cell-mm) * 0.68mm);
+    line-height: 1;
+    /* 防止被全局文本颜色/打印样式覆盖，导致“第一个字发黑” */
+    /* 用 rgba 而不是 opacity，避免部分浏览器/打印链路忽略文字 opacity 导致“发黑” */
+    color: var(--char-color-rgba) !important;
+    -webkit-text-fill-color: var(--char-color-rgba) !important;
+    opacity: 1 !important;
+    font-weight: 400;
+    user-select: none;
+    /* 修正字体度量导致的“看起来偏上/偏下/偏左/偏右” */
+    transform: translate(var(--char-shift-x), var(--char-shift-y));
+  }
+
+  .font-kaiti { font-family: "KaiTi", "Kaiti SC", "STKaiti", serif; }
+  .font-songti { font-family: "SimSun", "Songti SC", "STSong", serif; }
+  .font-heiti { font-family: "SimHei", "Heiti SC", "STHeiti", sans-serif; }
+
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+</style>
+
+<script>
+  function fillExample(text) {
+    document.getElementById('zitieText').value = text;
+    scheduleRender();
+  }
+
+  function setOpt(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val;
+    el.dispatchEvent(new Event('change'));
+  }
+
+  // ======= 实时渲染（同页预览 + 打印）=======
+  // 格子/字体偏大：将常用格宽从 20mm 下调到 18mm
+  const STANDARD_CELL_MM = 18;
+  // 打印内线“几乎看不到”：提高线条可见度（更接近印刷效果）
+  const GRID_COLOR_HEX = '#ef4444';
+  const GRID_BORDER_OPACITY = 1.0;
+  const GRID_INNER_OPACITY = 0.55;
+  
+  // CSS 绝对单位换算：1in = 96px, 1in = 25.4mm
+  const PX_PER_MM = 96 / 25.4;
+
+  function fontFamilyByKey(key) {
+    if (key === 'kaiti') return '"KaiTi","Kaiti SC","STKaiti",serif';
+    if (key === 'songti') return '"SimSun","Songti SC","STSong",serif';
+    if (key === 'heiti') return '"SimHei","Heiti SC","STHeiti",sans-serif';
+    return 'serif';
+  }
+
+  function hexToRgb(hex) {
+    const s = String(hex || '').trim();
+    const m = /^#?([0-9a-fA-F]{6})$/.exec(s);
+    if (!m) return { r: 0, g: 0, b: 0 }; // fallback: black
+    const v = m[1];
+    return {
+      r: parseInt(v.slice(0, 2), 16),
+      g: parseInt(v.slice(2, 4), 16),
+      b: parseInt(v.slice(4, 6), 16),
+    };
+  }
+
+  function computeRefCharRgba(opts) {
+    // 颜色逻辑优化：
+    // - 用户可自定义颜色 (opts.charColor)，默认为黑。
+    // - 整页通练(page) 或 描红模式(trace)：颜色透明度降低（方便描写），但加深到 0.45 以防看不清。
+    // - 临摹模式(copy)：通常为空或全黑（取决于具体 cell 逻辑），此处定义 page 级默认值。
+    
+    const isTrace = opts.mode === 'trace';
+    const isPageLayout = opts.layout === 'page';
+    
+    const hex = opts.charColor || '#000000';
+    let alpha = 1.0;
+    
+    if (isPageLayout || isTrace) {
+        // 描红/整页模式：使用 0.30 透明度，既能看清又能描
+        // 如果用户选了浅色，可能看不清，建议选深色
+        alpha = 0.30;
+    }
+    
+    const rgb = hexToRgb(hex);
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+  }
+
+  function computeRefCharRgbaForCell(opts, colIndex) {
+    // 单字行练(row) 特殊逻辑：
+    // - 首字：始终 100% 显色（作为范例）
+    // - 后续字：
+    //   - 描红模式：显示淡色参考字 (alpha 0.45)
+    //   - 临摹模式：不显示 (空)
+    
+    if (opts.layout === 'row') {
+      const rgb = hexToRgb(opts.charColor || '#000000');
+      
+      if (colIndex === 0) {
+        return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`;
+      }
+      
+      if (opts.mode === 'trace') {
+        return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.30)`;
+      }
+      
+      // Copy mode non-first cells are empty, color doesn't matter much but keep consistent
+      return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.45)`;
+    }
+    
+    return computeRefCharRgba(opts);
+  }
+
+  /**
+   * 计算“视觉居中”补偿量（px）
+   */
+  function computeCharCenterShiftPx(opts, chars) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx || typeof ctx.measureText !== 'function') return { x: 0, y: 0 };
+
+    const fontSizePx = opts.cellMM * 0.68 * PX_PER_MM;
+    const family = fontFamilyByKey(opts.font);
+    ctx.font = `400 ${fontSizePx}px ${family}`;
+
+    const samples = [];
+    const takeFromInput = (chars || [])
+      .filter(c => c && c.trim() && /[\u4e00-\u9fff]/.test(c))
+      .slice(0, 12);
+    samples.push(...takeFromInput);
+    if (samples.length === 0) {
+      samples.push('永', '国', '田', '中', '木', '口', '人', '一', '大', '小');
+    }
+
+    let sumX = 0, sumY = 0, n = 0;
+    for (const ch of samples) {
+      const m = ctx.measureText(ch);
+      if (m.actualBoundingBoxAscent == null || m.actualBoundingBoxDescent == null) continue;
+      if (m.actualBoundingBoxLeft == null || m.actualBoundingBoxRight == null) continue;
+
+      const bboxCenterX = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2;
+      const boxCenterX = (m.width != null ? m.width : (m.actualBoundingBoxRight + m.actualBoundingBoxLeft)) / 2;
+      const dx = boxCenterX - bboxCenterX;
+
+      const boxAscent =
+        (m.fontBoundingBoxAscent != null ? m.fontBoundingBoxAscent :
+        (m.emHeightAscent != null ? m.emHeightAscent : (fontSizePx * 0.8)));
+      const boxDescent =
+        (m.fontBoundingBoxDescent != null ? m.fontBoundingBoxDescent :
+        (m.emHeightDescent != null ? m.emHeightDescent : (fontSizePx * 0.2)));
+      const boxCenterY = (boxDescent - boxAscent) / 2;
+
+      const bboxCenterY = (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2;
+      const dy = boxCenterY - bboxCenterY;
+
+      sumX += dx;
+      sumY += dy;
+      n += 1;
+    }
+    if (!n) return { x: 0, y: 0 };
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const maxShift = fontSizePx * 0.18; 
+    return {
+      x: clamp(sumX / n, -maxShift, maxShift),
+      y: clamp(sumY / n, -maxShift, maxShift),
+    };
+  }
+
+  function sanitizeChars(text) {
+    return (text || '').split('').filter(c => c && c.trim().length > 0);
+  }
+
+  function calcColsRows(cellMM, padMM, headerMM) {
+    const pageW = 210, pageH = 297;
+    const contentW = pageW - padMM * 2;
+    const contentH = pageH - padMM * 2 - headerMM - 2; 
+    const cols = Math.max(1, Math.floor(contentW / cellMM));
+    const rows = Math.max(1, Math.floor(contentH / cellMM));
+    return { cols, rows };
+  }
+
+  function createPage(opts, pageNo, totalPages) {
+    const page = document.createElement('div');
+    page.className = 'page';
+    page.style.setProperty('--cell-mm', String(opts.cellMM));
+    
+    const charRgba = computeRefCharRgba(opts);
+    page.style.setProperty('--char-color-rgba', charRgba);
+
+    const charsForMeasure = sanitizeChars(opts.text);
+    const shift = computeCharCenterShiftPx(opts, charsForMeasure);
+    page.style.setProperty('--char-shift-x', `${shift.x.toFixed(2)}px`);
+    page.style.setProperty('--char-shift-y', `${shift.y.toFixed(2)}px`);
+
+    const header = document.createElement('div');
+    header.className = 'page-header';
+
+    const qrSrc = window.generatedQrcodeUrl || '';
+    const qrHtml = qrSrc ? `<img src="${qrSrc}" class="header-qrcode" />` : '';
+
+    header.innerHTML = `
+      <div class="header-left">
+        ${qrHtml}
+        <div class="page-title">${opts.title || '字帖练习'}</div>
+      </div>
+      <div class="page-fields">姓名：__________　日期：____年__月__日</div>
+    `;
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet';
+    sheet.dataset.grid = opts.grid;
+    sheet.style.gridTemplateColumns = `repeat(${opts.cols}, calc(${opts.cellMM} * 1mm))`;
+    sheet.style.gridTemplateRows = `repeat(${opts.rows}, calc(${opts.cellMM} * 1mm))`;
+    sheet.style.gridAutoRows = `calc(${opts.cellMM} * 1mm)`;
+    sheet.style.width = (opts.cols * opts.cellMM) + 'mm';
+    sheet.style.height = (opts.rows * opts.cellMM) + 'mm';
+
+    const overlay = buildGridOverlaySvg(opts);
+    if (overlay) sheet.appendChild(overlay);
+
+    const footer = document.createElement('div');
+    footer.className = 'page-footer';
+    footer.textContent = `第 ${pageNo} 页 / 共 ${totalPages} 页`;
+
+    page.appendChild(header);
+    page.appendChild(sheet);
+    page.appendChild(footer);
+    return { page, sheet };
+  }
+
+  function buildGridOverlaySvg(opts) {
+    if (!opts || !opts.grid || opts.grid === 'none') return null;
+
+    const w = opts.cols * opts.cellMM;
+    const h = opts.rows * opts.cellMM;
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'grid-overlay');
+    svg.setAttribute('width', w + 'mm');
+    svg.setAttribute('height', h + 'mm');
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.setAttribute('shape-rendering', 'geometricPrecision');
+
+    const innerW = 0.28;
+    const diagW = 0.25;
+
+    const addLine = (x1, y1, x2, y2, sw, opacity, crisp = true, dashed = false) => {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(x1));
+      line.setAttribute('y1', String(y1));
+      line.setAttribute('x2', String(x2));
+      line.setAttribute('y2', String(y2));
+      
+      line.style.stroke = GRID_COLOR_HEX;
+      line.style.strokeWidth = String(sw);
+      line.style.strokeOpacity = String(opacity);
+      line.style.fill = 'none';
+      
+      line.setAttribute('stroke', GRID_COLOR_HEX);
+      line.setAttribute('stroke-opacity', String(opacity));
+      line.setAttribute('stroke-width', String(sw));
+      line.setAttribute('stroke-linecap', 'square');
+      line.setAttribute('fill', 'none');
+      
+      if (crisp && !dashed) line.setAttribute('shape-rendering', 'geometricPrecision');
+      
+      if (dashed) {
+        line.setAttribute('stroke-dasharray', '1.5 1.5');
+        line.style.strokeDasharray = '1.5 1.5';
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const len = Math.sqrt(dx*dx + dy*dy);
+        const offset = (len / 2) % 3 - 0.75;
+        line.setAttribute('stroke-dashoffset', String(-offset));
+        line.style.strokeDashoffset = String(-offset);
+        line.setAttribute('shape-rendering', 'geometricPrecision');
+      }
+      svg.appendChild(line);
+    };
+
+    const strokeW = 0.60;
+    const halfStroke = strokeW / 2;
+    const border = document.createElementNS(NS, 'rect');
+    border.setAttribute('x', String(halfStroke));
+    border.setAttribute('y', String(halfStroke));
+    border.setAttribute('width', String(w - strokeW));
+    border.setAttribute('height', String(h - strokeW));
+    border.setAttribute('fill', 'none');
+    border.style.fill = 'none';
+    border.setAttribute('stroke', GRID_COLOR_HEX);
+    border.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
+    border.setAttribute('stroke-width', String(strokeW));
+    border.setAttribute('stroke-linecap', 'square');
+    border.style.stroke = GRID_COLOR_HEX;
+    border.setAttribute('shape-rendering', 'geometricPrecision');
+    svg.appendChild(border);
+
+    for (let i = 1; i < opts.cols; i++) {
+      const x = i * opts.cellMM;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(x));
+      line.setAttribute('y1', String(halfStroke));
+      line.setAttribute('x2', String(x));
+      line.setAttribute('y2', String(h - halfStroke));
+      line.setAttribute('stroke', GRID_COLOR_HEX);
+      line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
+      line.setAttribute('stroke-width', String(strokeW));
+      line.setAttribute('stroke-linecap', 'square');
+      line.setAttribute('shape-rendering', 'geometricPrecision');
+      svg.appendChild(line);
+    }
+    for (let j = 1; j < opts.rows; j++) {
+      const y = j * opts.cellMM;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(halfStroke));
+      line.setAttribute('y1', String(y));
+      line.setAttribute('x2', String(w - halfStroke));
+      line.setAttribute('y2', String(y));
+      line.setAttribute('stroke', GRID_COLOR_HEX);
+      line.setAttribute('stroke-opacity', String(GRID_BORDER_OPACITY));
+      line.setAttribute('stroke-width', String(strokeW));
+      line.setAttribute('stroke-linecap', 'square');
+      line.setAttribute('shape-rendering', 'geometricPrecision');
+      svg.appendChild(line);
+    }
+
+    const needCross = (opts.grid === 'tian' || opts.grid === 'mizi' || opts.grid === 'huigong');
+    const needDiag = (opts.grid === 'mizi');
+    const needHuigong = (opts.grid === 'huigong');
+    const cell = opts.cellMM;
+    const half = cell / 2;
+
+    for (let r = 0; r < opts.rows; r++) {
+      const y0 = r * cell;
+      for (let c = 0; c < opts.cols; c++) {
+        const x0 = c * cell;
+        if (needCross) {
+          addLine(x0 + half, y0, x0 + half, y0 + cell, innerW, GRID_INNER_OPACITY, true, true);
+          addLine(x0, y0 + half, x0 + cell, y0 + half, innerW, GRID_INNER_OPACITY, true, true);
+        }
+        if (needDiag) {
+          addLine(x0, y0, x0 + cell, y0 + cell, diagW, GRID_INNER_OPACITY, false, true);
+          addLine(x0 + cell, y0, x0, y0 + cell, diagW, GRID_INNER_OPACITY, false, true);
+        }
+        if (needHuigong) {
+          const inset = cell * 0.25;
+          const rect = document.createElementNS(NS, 'rect');
+          rect.setAttribute('x', String(x0 + inset));
+          rect.setAttribute('y', String(y0 + inset));
+          rect.setAttribute('width', String(cell - inset * 2));
+          rect.setAttribute('height', String(cell - inset * 2));
+          rect.setAttribute('fill', 'none');
+          rect.style.fill = 'none';
+          rect.setAttribute('stroke', GRID_COLOR_HEX);
+          rect.style.stroke = GRID_COLOR_HEX;
+          rect.setAttribute('stroke-opacity', String(GRID_INNER_OPACITY));
+          rect.setAttribute('stroke-width', String(innerW));
+          rect.setAttribute('stroke-linecap', 'square');
+          rect.setAttribute('stroke-dasharray', '1.2 1.2');
+          rect.setAttribute('shape-rendering', 'geometricPrecision');
+          svg.appendChild(rect);
+        }
+      }
+    }
+
+    return svg;
+  }
+
+  function makeCell(opts, chOrEmpty, colIndex = null) {
+    const cell = document.createElement('div');
+    cell.className = `cell font-${opts.font}`;
+    cell.style.setProperty('--char-color-rgba', colIndex == null ? computeRefCharRgba(opts) : computeRefCharRgbaForCell(opts, colIndex));
+    if (chOrEmpty) {
+      const span = document.createElement('span');
+      span.className = 'char';
+      span.textContent = chOrEmpty;
+      cell.appendChild(span);
+    }
+    return cell;
+  }
+
+  function computeTotalPages(opts, chars) {
+    if (opts.layout === 'row') {
+      const totalRows = Math.max(1, chars.length || 1);
+      return Math.max(1, Math.ceil(totalRows / opts.rows));
+    }
+    const cellsPerPage = opts.cols * opts.rows;
+    if (chars.length === 0) return 1;
+    if (opts.repeatFill) return Math.max(1, Math.ceil(chars.length / cellsPerPage));
+    return Math.max(1, Math.ceil(chars.length / cellsPerPage));
+  }
+
+  function renderRowLayout(opts, chars, totalPages) {
+    const root = document.getElementById('pagesRoot');
+    root.innerHTML = '';
+
+    const perPageRows = opts.rows;
+    let rowIndex = 0;
+    let pageNo = 1;
+    let pageBundle = createPage(opts, pageNo, totalPages);
+    root.appendChild(pageBundle.page);
+
+    for (let i = 0; i < chars.length; i++) {
+      if (rowIndex >= perPageRows) {
+        pageNo += 1;
+        pageBundle = createPage(opts, pageNo, totalPages);
+        root.appendChild(pageBundle.page);
+        rowIndex = 0;
+      }
+
+      const ch = chars[i];
+      for (let c = 0; c < opts.cols; c++) {
+        const show = (opts.mode === 'trace') ? ch : (c === 0 ? ch : '');
+        pageBundle.sheet.appendChild(makeCell(opts, show, c));
+      }
+      rowIndex += 1;
+    }
+
+    while (rowIndex < perPageRows) {
+      for (let c = 0; c < opts.cols; c++) {
+        pageBundle.sheet.appendChild(makeCell(opts, '', c));
+      }
+      rowIndex += 1;
+    }
+  }
+
+  function renderPageLayout(opts, chars, totalPages) {
+    const root = document.getElementById('pagesRoot');
+    root.innerHTML = '';
+
+    const cellsPerPage = opts.cols * opts.rows;
+    let idx = 0;
+    let pageNo = 1;
+
+    const pagesToRender = Math.min(20, totalPages);
+    while (pageNo <= pagesToRender) {
+      const pageBundle = createPage(opts, pageNo, totalPages);
+      root.appendChild(pageBundle.page);
+
+      for (let i = 0; i < cellsPerPage; i++) {
+        let ch = '';
+        if (chars.length > 0) {
+          if (idx < chars.length) ch = chars[idx];
+          else if (opts.repeatFill) ch = chars[idx % chars.length];
+          else ch = '';
+        }
+        pageBundle.sheet.appendChild(makeCell(opts, ch));
+        idx += 1;
+      }
+
+      pageNo += 1;
+    }
+  }
+
+  function readOpts() {
+    const title = (document.getElementById('zitieTitle').value || '字帖练习').trim();
+    const text = (document.getElementById('zitieText').value || '').trim();
+    const layout = document.getElementById('zitieLayout').value;
+    const grid = document.getElementById('zitieGrid').value;
+    const font = document.getElementById('zitieFont').value;
+    const charColor = document.getElementById('zitieCharColor').value;
+    const mode = document.getElementById('zitieMode').value;
+    
+    // Checkbox handling
+    const repeatEl = document.getElementById('zitieRepeatFill');
+    const repeatFill = repeatEl ? repeatEl.checked : false;
+
+    const cellMM = STANDARD_CELL_MM;
+    const { cols, rows } = calcColsRows(cellMM, 14, 14);
+    return { title, text, layout, grid, font, charColor, mode, repeatFill, cellMM, cols, rows };
+  }
+
+  let renderTimer = null;
+  function scheduleRender() {
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = setTimeout(renderAll, 120);
+  }
+
+  function syncRepeatFillUI() {
+    const layout = document.getElementById('zitieLayout').value;
+    const isRow = layout === 'row';
+    
+    // Toggle container
+    const c = document.getElementById('repeatFillContainer');
+    if (c) {
+        if (isRow) c.classList.add('hidden');
+        else c.classList.remove('hidden');
+    }
+    
+    // Update Layout Buttons
+    const btnRow = document.getElementById('btnLayoutRow');
+    const btnPage = document.getElementById('btnLayoutPage');
+    if (btnRow && btnPage) {
+        if (isRow) {
+            btnRow.className = "border rounded px-2 py-1.5 text-sm text-center transition-colors border-primary bg-primary/5 text-primary font-medium";
+            btnPage.className = "border border-gray-200 rounded px-2 py-1.5 text-sm text-center text-gray-600 hover:bg-gray-50 transition-colors";
+        } else {
+            btnPage.className = "border rounded px-2 py-1.5 text-sm text-center transition-colors border-primary bg-primary/5 text-primary font-medium";
+            btnRow.className = "border border-gray-200 rounded px-2 py-1.5 text-sm text-center text-gray-600 hover:bg-gray-50 transition-colors";
+        }
+    }
+  }
+
+  function renderAll() {
+    syncRepeatFillUI();
+    const opts = readOpts();
+    const chars = sanitizeChars(opts.text);
+    const safeChars = chars.length ? chars : ['字'];
+
+    const totalPages = computeTotalPages(opts, chars);
+    const pageCountEl = document.getElementById('pageCount');
+    if (pageCountEl) pageCountEl.textContent = String(totalPages);
+
+    if (opts.layout === 'row') renderRowLayout(opts, safeChars, totalPages);
+    else renderPageLayout(opts, chars, totalPages);
+  }
+
+  // ======= 顶部二维码（指向生成页）=======
+  async function renderQRCode() {
+    const img = document.getElementById('qrcodeImg');
+    if (!img) return;
+    const url = `${window.location.origin}/tools/zitie-new`;
+    try {
+      const resp = await fetch('/api/utils/qrcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: url, fill_color: '#111827', back_color: 'white' })
+      });
+      if (!resp.ok) throw new Error('qrcode api failed');
+      const blob = await resp.blob();
+      const objUrl = URL.createObjectURL(blob);
+      img.src = objUrl;
+      
+      // Store globally and re-render pages to include QR code
+      window.generatedQrcodeUrl = objUrl;
+      scheduleRender();
+
+    } catch (e) {
+      console.error(e);
+      // fallback: text
+      img.alt = url;
+    }
+  }
+
+  // default example
+  fillExample('一二三十木禾');
+  renderQRCode();
+  syncRepeatFillUI();
+  // renderAll() is called by fillExample -> scheduleRender
+
+  // bind events
+  ['zitieTitle','zitieText','zitieLayout','zitieGrid','zitieFont','zitieCharColor','zitieMode','zitieRepeatFill'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', scheduleRender);
+    el.addEventListener('change', scheduleRender);
+  });
+</script>
+{% endblock %}
