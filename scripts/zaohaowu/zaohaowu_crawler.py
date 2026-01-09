@@ -107,6 +107,9 @@ class ZaoHaoWuCrawler:
         self.base_url = "https://zaohaowu.com"
         self.max_votes_per_day = max_votes_per_day
         self.script_dir = Path(__file__).parent
+        # 创建data文件夹用于存储生成的文件
+        self.data_dir = self.script_dir / "data"
+        self.data_dir.mkdir(exist_ok=True)
         self.cookies_file = self.script_dir / "cookies.json"
         self.today = datetime.now().strftime("%Y-%m-%d")
         # 线程级别的余额不足标志（每个Cookie任务独立）
@@ -134,7 +137,7 @@ class ZaoHaoWuCrawler:
         """获取投票计数文件路径"""
         cookie = self._get_current_cookie()
         cookie_id = hashlib.md5(cookie.encode()).hexdigest()[:8]
-        return self.script_dir / f"vote_count_{cookie_id}.json"
+        return self.data_dir / f"vote_count_{cookie_id}.json"
     
     def _get_today_vote_count(self) -> int:
         """获取今日投票次数"""
@@ -376,13 +379,14 @@ class ZaoHaoWuCrawler:
             thread_safe_print(f"{self.thread_prefix} ✗ 用户信息接口调用失败: {e}")
             raise
     
-    def get_ranking_want(self, limit: int = 40, want_it_ranking_type: int = 2) -> List[Dict[str, Any]]:
+    def get_ranking_want(self, limit: int = 40, want_it_ranking_type: int = 2, page: int = 1) -> List[Dict[str, Any]]:
         """
-        获取排行榜数据
+        获取排行榜数据（支持分页）
         
         Args:
-            limit: 返回数量限制
+            limit: 每页返回数量限制
             want_it_ranking_type: 排行榜类型
+            page: 页码（从1开始）
             
         Returns:
             排行榜数据列表
@@ -390,7 +394,8 @@ class ZaoHaoWuCrawler:
         url = f"{self.base_url}/aigc/api/ranking/want"
         params = {
             "limit": limit,
-            "wantItRankingType": want_it_ranking_type
+            "wantItRankingType": want_it_ranking_type,
+            "page": page
         }
         
         try:
@@ -416,11 +421,39 @@ class ZaoHaoWuCrawler:
             else:
                 data = []
             
-            thread_safe_print(f"{self.thread_prefix} ✓ 排行榜接口调用成功，获取到 {len(data)} 条数据")
+            thread_safe_print(f"{self.thread_prefix} ✓ 排行榜接口调用成功（第{page}页），获取到 {len(data)} 条数据")
             return data
         except Exception as e:
             thread_safe_print(f"{self.thread_prefix} ✗ 排行榜接口调用失败: {e}")
             raise
+    
+    def get_ranking_want_multi_pages(self, pages: int = 2, limit: int = 40, want_it_ranking_type: int = 2) -> List[Dict[str, Any]]:
+        """
+        获取多页排行榜数据并合并
+        
+        Args:
+            pages: 获取的页数（默认2页）
+            limit: 每页返回数量限制
+            want_it_ranking_type: 排行榜类型
+            
+        Returns:
+            合并后的排行榜数据列表
+        """
+        all_data = []
+        for page in range(1, pages + 1):
+            try:
+                page_data = self.get_ranking_want(limit=limit, want_it_ranking_type=want_it_ranking_type, page=page)
+                all_data.extend(page_data)
+                # 页面之间添加延迟，模拟人类操作
+                if page < pages:
+                    self._random_delay(1.0, variance=0.3)
+            except Exception as e:
+                thread_safe_print(f"{self.thread_prefix} ⚠️  获取第{page}页数据失败: {e}")
+                # 如果某一页失败，继续获取下一页
+                continue
+        
+        thread_safe_print(f"{self.thread_prefix} ✓ 共获取 {pages} 页数据，合并后共 {len(all_data)} 条")
+        return all_data
     
     def extract_unique_want_it_ids(self, ranking_data: List[Dict[str, Any]]) -> List[str]:
         """
@@ -570,9 +603,9 @@ class ZaoHaoWuCrawler:
         thread_safe_print(f"{self.thread_prefix} \n[步骤 2] 等待中...")
         self._random_delay(2.0, variance=0.3)  # 2秒 ± 30%，模拟人类操作间隔
         
-        # 步骤3: 获取排行榜数据
-        thread_safe_print(f"{self.thread_prefix} \n[步骤 3] 获取排行榜数据...")
-        ranking_data = self.get_ranking_want(limit, want_it_ranking_type)
+        # 步骤3: 获取排行榜数据（获取2页，防作弊）
+        thread_safe_print(f"{self.thread_prefix} \n[步骤 3] 获取排行榜数据（获取2页）...")
+        ranking_data = self.get_ranking_want_multi_pages(pages=2, limit=limit, want_it_ranking_type=want_it_ranking_type)
         
         if not ranking_data:
             thread_safe_print(f"{self.thread_prefix} ✗ 未获取到排行榜数据，退出")
@@ -585,6 +618,10 @@ class ZaoHaoWuCrawler:
         if not want_it_ids:
             thread_safe_print(f"{self.thread_prefix} ✗ 未提取到任何 wantItId，退出")
             return {"total": 0, "success": 0, "fail": 0}
+        
+        # 步骤4.5: 随机打乱want列表（防作弊）
+        random.shuffle(want_it_ids)
+        thread_safe_print(f"{self.thread_prefix} ✓ 已随机打乱 want 列表，共 {len(want_it_ids)} 个")
         
         # 步骤5: 批量发送 want 请求
         current_vote_count = self._get_today_vote_count()
@@ -867,7 +904,9 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
     
     # 检查是否是第一次执行（使用文件记录执行状态）
     script_dir = Path(__file__).parent
-    first_run_flag_file = script_dir / ".first_run_completed"
+    data_dir = script_dir / "data"
+    data_dir.mkdir(exist_ok=True)
+    first_run_flag_file = data_dir / ".first_run_completed"
     is_first_run = not first_run_flag_file.exists()
     
     # 程序启动时总是立即执行一次
