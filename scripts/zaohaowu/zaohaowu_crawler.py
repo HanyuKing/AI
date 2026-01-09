@@ -2,8 +2,8 @@
 早好物爬虫脚本
 功能：
 1. 调用用户信息接口
-2. 获取排行榜数据并提取 uniqueContentId
-3. 批量发送 want 请求
+2. 获取排行榜数据并提取 uniqueWantItId（从 wantItRespMap 中提取）
+3. 批量发送 want 请求（GET /aigc/api/ticket/wantIt）
 
 反爬虫措施：
 - 随机User-Agent
@@ -107,7 +107,10 @@ class ZaoHaoWuCrawler:
         self.base_url = "https://zaohaowu.com"
         self.max_votes_per_day = max_votes_per_day
         self.script_dir = Path(__file__).parent
+        self.cookies_file = self.script_dir / "cookies.json"
         self.today = datetime.now().strftime("%Y-%m-%d")
+        # 线程级别的余额不足标志（每个Cookie任务独立）
+        self.insufficient_balance = False
         self._update_headers()
         
         # 创建HTTP客户端，使用连接池（每个线程独立的客户端）
@@ -167,6 +170,136 @@ class ZaoHaoWuCrawler:
                 log_print(f"⚠️  保存投票计数失败: {e}")
                 return False
     
+    def _extract_cookie_from_headers(self, response: httpx.Response) -> Optional[str]:
+        """
+        从响应头中提取Cookie
+        
+        Args:
+            response: HTTP响应对象
+            
+        Returns:
+            提取的Cookie字符串，如果没有则返回None
+        """
+        # 方法1: 使用httpx的cookies属性（推荐）
+        if hasattr(response, 'cookies') and response.cookies:
+            # 将Cookies对象转换为字符串格式
+            cookie_parts = []
+            for name, value in response.cookies.items():
+                cookie_parts.append(f"{name}={value}")
+            
+            if cookie_parts:
+                new_cookie = '; '.join(cookie_parts)
+                return new_cookie
+        
+        # 方法2: 从响应头的 Set-Cookie 中提取cookie（备用）
+        set_cookies = response.headers.get_list("Set-Cookie")
+        if set_cookies:
+            # 合并所有Set-Cookie头
+            cookie_parts = []
+            for set_cookie in set_cookies:
+                # Set-Cookie格式: name=value; path=/; domain=...
+                # 只提取 name=value 部分
+                cookie_part = set_cookie.split(';')[0].strip()
+                if cookie_part:
+                    cookie_parts.append(cookie_part)
+            
+            if cookie_parts:
+                # 合并所有cookie部分
+                new_cookie = '; '.join(cookie_parts)
+                return new_cookie
+        
+        return None
+    
+    def _merge_cookies(self, current_cookie: str, new_cookie: str) -> str:
+        """
+        合并两个Cookie字符串
+        
+        Args:
+            current_cookie: 当前Cookie字符串
+            new_cookie: 新的Cookie字符串（从响应头获取）
+            
+        Returns:
+            合并后的Cookie字符串
+        """
+        if not current_cookie:
+            return new_cookie
+        if not new_cookie:
+            return current_cookie
+        
+        # 将cookie字符串转换为字典
+        def cookie_to_dict(cookie_str: str) -> Dict[str, str]:
+            cookie_dict = {}
+            for item in cookie_str.split(';'):
+                item = item.strip()
+                if '=' in item:
+                    key, value = item.split('=', 1)
+                    cookie_dict[key.strip()] = value.strip()
+            return cookie_dict
+        
+        # 合并cookie字典
+        current_dict = cookie_to_dict(current_cookie)
+        new_dict = cookie_to_dict(new_cookie)
+        
+        # 新cookie覆盖旧cookie中相同的key
+        merged_dict = {**current_dict, **new_dict}
+        
+        # 转换回字符串格式
+        merged_cookie = '; '.join([f"{k}={v}" for k, v in merged_dict.items()])
+        return merged_cookie
+    
+    def _update_cookie_from_response(self, response: httpx.Response) -> bool:
+        """
+        从响应头中提取Cookie并更新当前Cookie
+        
+        Args:
+            response: HTTP响应对象
+            
+        Returns:
+            是否成功更新Cookie
+        """
+        new_cookie = self._extract_cookie_from_headers(response)
+        if not new_cookie:
+            return False
+        
+        # 获取当前cookie
+        current_cookie = self._get_current_cookie()
+        
+        # 合并cookie（新cookie会覆盖旧cookie中相同的key）
+        merged_cookie = self._merge_cookies(current_cookie, new_cookie)
+        
+        # 如果合并后的cookie与当前cookie不同，则更新
+        if merged_cookie != current_cookie:
+            # 更新当前cookie
+            if self.cookies:
+                self.cookies[self.current_cookie_index] = merged_cookie
+                self._update_headers()
+                
+                # 保存到配置文件
+                self._save_cookies_to_file()
+                
+                thread_safe_print(f"{self.thread_prefix} 🔄 Cookie已从响应头更新并保存到配置文件")
+                return True
+        
+        return False
+    
+    def _save_cookies_to_file(self):
+        """保存Cookie列表到配置文件"""
+        if not self.cookies_file.exists():
+            return
+        
+        try:
+            with open(self.cookies_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            # 更新cookies列表
+            config["cookies"] = self.cookies
+            
+            # 保存回文件
+            with open(self.cookies_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            thread_safe_print(f"{self.thread_prefix} ⚠️  保存Cookie到配置文件失败: {e}")
+    
     def _rotate_cookie(self):
         """轮换到下一个Cookie"""
         if len(self.cookies) > 1:
@@ -207,7 +340,7 @@ class ZaoHaoWuCrawler:
     
     def get_user_info(self) -> Dict[str, Any]:
         """
-        获取用户信息
+        获取用户信息，并从响应头中提取并更新Cookie
         
         Returns:
             用户信息响应数据
@@ -222,6 +355,9 @@ class ZaoHaoWuCrawler:
             response.raise_for_status()
             result = response.json()
             
+            # 从响应头中提取并更新Cookie
+            self._update_cookie_from_response(response)
+            
             # 检查是否需要切换Cookie
             if result.get("code") == 401:
                 thread_safe_print(f"{self.thread_prefix} ⚠️  Cookie可能已过期，尝试切换Cookie...")
@@ -231,6 +367,8 @@ class ZaoHaoWuCrawler:
                 response = self.client.get(url, params=params, headers=self.headers)
                 response.raise_for_status()
                 result = response.json()
+                # 再次尝试更新Cookie
+                self._update_cookie_from_response(response)
             
             thread_safe_print(f"{self.thread_prefix} ✓ 用户信息接口调用成功")
             return result
@@ -284,62 +422,104 @@ class ZaoHaoWuCrawler:
             thread_safe_print(f"{self.thread_prefix} ✗ 排行榜接口调用失败: {e}")
             raise
     
-    def extract_unique_content_ids(self, ranking_data: List[Dict[str, Any]]) -> List[str]:
+    def extract_unique_want_it_ids(self, ranking_data: List[Dict[str, Any]]) -> List[str]:
         """
-        从排行榜数据中提取 uniqueContentId
+        从排行榜数据中提取 uniqueWantItId（从 wantItRespMap 中提取）
         
         Args:
             ranking_data: 排行榜数据列表（dataList）
             
         Returns:
-            uniqueContentId 列表
+            uniqueWantItId 列表
         """
-        content_ids = []
+        want_it_ids = []
         for item in ranking_data:
-            # 数据结构中直接包含 uniqueContentId 字段
-            content_id = item.get("uniqueContentId")
-            if content_id:
-                content_ids.append(content_id)
+            # 从 wantItRespMap 中提取 uniqueWantItId
+            want_it_resp_map = item.get("wantItRespMap", {})
+            if isinstance(want_it_resp_map, dict):
+                for key, value in want_it_resp_map.items():
+                    if isinstance(value, dict):
+                        unique_want_it_id = value.get("uniqueWantItId")
+                        if unique_want_it_id:
+                            want_it_ids.append(unique_want_it_id)
         
-        thread_safe_print(f"{self.thread_prefix} ✓ 提取到 {len(content_ids)} 个 uniqueContentId")
-        return content_ids
+        thread_safe_print(f"{self.thread_prefix} ✓ 提取到 {len(want_it_ids)} 个 uniqueWantItId")
+        return want_it_ids
     
-    def send_want_request(self, content_id: str) -> Dict[str, Any]:
+    def _check_insufficient_balance(self, result: Dict[str, Any]) -> bool:
+        """
+        检查响应中是否包含余额不足的错误
+        
+        Args:
+            result: 响应数据
+            
+        Returns:
+            是否余额不足
+        """
+        msg = result.get("msg", "").lower() if result.get("msg") else ""
+        error = result.get("error", "").lower() if result.get("error") else ""
+        
+        # 检查是否包含余额不足相关的关键词
+        balance_keywords = ["余额不足", "insufficient", "balance", "余额", "不足"]
+        for keyword in balance_keywords:
+            if keyword in msg or keyword in error:
+                return True
+        return False
+    
+    def send_want_request(self, want_it_id: str) -> Dict[str, Any]:
         """
         发送 want 请求（带每日投票限制检查）
         
         Args:
-            content_id: 内容ID
+            want_it_id: uniqueWantItId
             
         Returns:
             请求响应数据
         """
+        # 检查是否已标记余额不足（线程级别）
+        if self.insufficient_balance:
+            thread_safe_print(f"{self.thread_prefix} ⚠️  检测到余额不足，停止执行")
+            return {"success": False, "error": "余额不足", "code": 402, "insufficient_balance": True}
+        
         # 检查今日投票限制
         current_count = self._get_today_vote_count()
         if current_count >= self.max_votes_per_day:
             thread_safe_print(f"{self.thread_prefix} ⚠️  今日投票次数已达上限（{current_count}/{self.max_votes_per_day}），跳过")
             return {"success": False, "error": "已达每日投票上限", "code": 429, "skipped": True}
         
-        url = f"{self.base_url}/aigc/api/topic/content/want"
-        payload = {
-            "contentId": content_id
+        url = f"{self.base_url}/aigc/api/ticket/wantIt"
+        params = {
+            "wantItId": want_it_id,
+            "_timer": int(time.time() * 1000)
         }
         
         try:
             # 每次请求前更新请求头（随机User-Agent）
             self._update_headers()
-            response = self.client.post(url, json=payload, headers=self.headers)
+            response = self.client.get(url, params=params, headers=self.headers)
             response.raise_for_status()
             result = response.json()
+            
+            # 检查余额不足（线程级别）
+            if self._check_insufficient_balance(result):
+                self.insufficient_balance = True
+                thread_safe_print(f"{self.thread_prefix} ⚠️  余额不足，立即停止当前线程执行")
+                return {"success": False, "error": "余额不足", "code": result.get("code", 402), "insufficient_balance": True}
             
             # 如果返回401，尝试切换Cookie并重试
             if result.get("code") == 401:
                 thread_safe_print(f"{self.thread_prefix} ⚠️  Cookie可能已过期，尝试切换Cookie...")
                 self._rotate_cookie()
                 self._update_headers()
-                response = self.client.post(url, json=payload, headers=self.headers)
+                response = self.client.get(url, params=params, headers=self.headers)
                 response.raise_for_status()
                 result = response.json()
+                
+                # 再次检查余额不足（线程级别）
+                if self._check_insufficient_balance(result):
+                    self.insufficient_balance = True
+                    thread_safe_print(f"{self.thread_prefix} ⚠️  余额不足，立即停止当前线程执行")
+                    return {"success": False, "error": "余额不足", "code": result.get("code", 402), "insufficient_balance": True}
             
             # 投票成功，增加计数
             if result.get("code") == 200 or result.get("success") is not False:
@@ -357,10 +537,10 @@ class ZaoHaoWuCrawler:
                 error_msg = error_data.get("msg", error_msg)
             except:
                 pass
-            thread_safe_print(f"{self.thread_prefix} ✗ 请求失败 (contentId: {content_id}): {error_msg}")
+            thread_safe_print(f"{self.thread_prefix} ✗ 请求失败 (wantItId: {want_it_id}): {error_msg}")
             return {"success": False, "error": error_msg, "code": e.response.status_code}
         except Exception as e:
-            thread_safe_print(f"{self.thread_prefix} ✗ 请求异常 (contentId: {content_id}): {e}")
+            thread_safe_print(f"{self.thread_prefix} ✗ 请求异常 (wantItId: {want_it_id}): {e}")
             return {"success": False, "error": str(e)}
     
     def run(self, limit: int = 40, want_it_ranking_type: int = 2, delay: float = 0.5) -> Dict[str, Any]:
@@ -398,12 +578,12 @@ class ZaoHaoWuCrawler:
             thread_safe_print(f"{self.thread_prefix} ✗ 未获取到排行榜数据，退出")
             return {"total": 0, "success": 0, "fail": 0}
         
-        # 步骤4: 提取 uniqueContentId
-        thread_safe_print(f"{self.thread_prefix} \n[步骤 4] 提取 uniqueContentId...")
-        content_ids = self.extract_unique_content_ids(ranking_data)
+        # 步骤4: 提取 uniqueWantItId
+        thread_safe_print(f"{self.thread_prefix} \n[步骤 4] 提取 uniqueWantItId...")
+        want_it_ids = self.extract_unique_want_it_ids(ranking_data)
         
-        if not content_ids:
-            thread_safe_print(f"{self.thread_prefix} ✗ 未提取到任何 contentId，退出")
+        if not want_it_ids:
+            thread_safe_print(f"{self.thread_prefix} ✗ 未提取到任何 wantItId，退出")
             return {"total": 0, "success": 0, "fail": 0}
         
         # 步骤5: 批量发送 want 请求
@@ -412,20 +592,20 @@ class ZaoHaoWuCrawler:
         
         thread_safe_print(f"{self.thread_prefix} \n[步骤 5] 开始批量发送 want 请求")
         thread_safe_print(f"{self.thread_prefix} 今日已投票: {current_vote_count}/{self.max_votes_per_day}, 剩余可投票: {remaining_votes} 次")
-        thread_safe_print(f"{self.thread_prefix} 待处理: {len(content_ids)} 个")
+        thread_safe_print(f"{self.thread_prefix} 待处理: {len(want_it_ids)} 个")
         
         if remaining_votes <= 0:
             thread_safe_print(f"{self.thread_prefix} ⚠️  今日投票次数已达上限，跳过所有请求")
             return {
-                "total": len(content_ids),
+                "total": len(want_it_ids),
                 "success": 0,
                 "fail": 0,
-                "skipped": len(content_ids)
+                "skipped": len(want_it_ids)
             }
         
         # 限制处理数量不超过剩余可投票数
-        content_ids_to_process = content_ids[:remaining_votes]
-        skipped_count = len(content_ids) - len(content_ids_to_process)
+        want_it_ids_to_process = want_it_ids[:remaining_votes]
+        skipped_count = len(want_it_ids) - len(want_it_ids_to_process)
         
         if skipped_count > 0:
             thread_safe_print(f"{self.thread_prefix} ⚠️  将跳过 {skipped_count} 个请求（超过每日限制）")
@@ -434,9 +614,19 @@ class ZaoHaoWuCrawler:
         fail_count = 0
         skipped_count_actual = 0
         
-        for i, content_id in enumerate(content_ids_to_process, 1):
-            thread_safe_print(f"{self.thread_prefix} \n[{i}/{len(content_ids_to_process)}] 处理 contentId: {content_id}")
-            result = self.send_want_request(content_id)
+        for i, want_it_id in enumerate(want_it_ids_to_process, 1):
+            # 检查是否余额不足（线程级别）
+            if self.insufficient_balance:
+                thread_safe_print(f"{self.thread_prefix} ⚠️  检测到余额不足，立即停止当前线程执行")
+                break
+            
+            thread_safe_print(f"{self.thread_prefix} \n[{i}/{len(want_it_ids_to_process)}] 处理 wantItId: {want_it_id}")
+            result = self.send_want_request(want_it_id)
+            
+            # 检查余额不足
+            if result.get("insufficient_balance"):
+                thread_safe_print(f"{self.thread_prefix}   ⚠️  余额不足，立即停止执行")
+                break
             
             if result.get("skipped"):
                 skipped_count_actual += 1
@@ -449,7 +639,7 @@ class ZaoHaoWuCrawler:
                 thread_safe_print(f"{self.thread_prefix}   ✗ 失败: {result.get('msg', result.get('error', '未知错误'))}")
             
             # 随机延迟，避免请求过快（模拟人类行为）
-            if i < len(content_ids_to_process):
+            if i < len(want_it_ids_to_process):
                 # 在基础延迟上增加随机变化，模拟人类操作的不规律性
                 self._random_delay(delay, variance=0.4)
         
@@ -458,19 +648,22 @@ class ZaoHaoWuCrawler:
         thread_safe_print(f"{self.thread_prefix} \n" + "=" * 50)
         thread_safe_print(f"{self.thread_prefix} 爬虫执行完成")
         thread_safe_print(f"{self.thread_prefix} " + "=" * 50)
-        thread_safe_print(f"{self.thread_prefix} 总计: {len(content_ids)} 个")
+        thread_safe_print(f"{self.thread_prefix} 总计: {len(want_it_ids)} 个")
         thread_safe_print(f"{self.thread_prefix} 成功: {success_count} 个")
         thread_safe_print(f"{self.thread_prefix} 失败: {fail_count} 个")
         if skipped_count > 0 or skipped_count_actual > 0:
             thread_safe_print(f"{self.thread_prefix} 跳过: {skipped_count + skipped_count_actual} 个（超过每日限制）")
         thread_safe_print(f"{self.thread_prefix} 今日总投票: {final_vote_count}/{self.max_votes_per_day}")
+        if self.insufficient_balance:
+            thread_safe_print(f"{self.thread_prefix} ⚠️  余额不足，当前线程已停止执行")
         thread_safe_print(f"{self.thread_prefix} " + "=" * 50)
         
         return {
-            "total": len(content_ids),
+            "total": len(want_it_ids),
             "success": success_count,
             "fail": fail_count,
-            "skipped": skipped_count + skipped_count_actual
+            "skipped": skipped_count + skipped_count_actual,
+            "insufficient_balance": self.insufficient_balance
         }
     
     def __enter__(self):
@@ -654,6 +847,7 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
     主函数
     Cookie和定时任务配置从 cookies.json 文件中读取
     支持多Cookie并发执行，互不影响
+    第一次启动时立即执行，之后才根据时间控制
     
     Args:
         schedule_mode: 是否启用定时任务模式（None表示从配置文件读取）
@@ -671,52 +865,22 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
     schedule_start_hour = start_hour if start_hour is not None else schedule_config.get("start_hour", 7)
     schedule_end_hour = end_hour if end_hour is not None else schedule_config.get("end_hour", 9)
     
-    # 定时任务模式
+    # 检查是否是第一次执行（使用文件记录执行状态）
+    script_dir = Path(__file__).parent
+    first_run_flag_file = script_dir / ".first_run_completed"
+    is_first_run = not first_run_flag_file.exists()
+    
+    # 程序启动时总是立即执行一次
+    log_print("\n🚀 程序启动，立即执行")
+    log_print(f"⏰ 当前时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # 定时任务模式（仅用于后续的循环执行，不影响首次启动）
     if schedule_enabled:
         log_print("=" * 60)
         log_print("定时任务模式已启用")
         log_print(f"运行时间范围: {schedule_start_hour}:00 - {schedule_end_hour}:00")
+        log_print("（首次启动立即执行，后续将按时间控制）")
         log_print("=" * 60)
-        
-        # 检查当前时间是否在运行时间范围内
-        now = datetime.now()
-        current_hour = now.hour
-        
-        if not is_in_time_range(schedule_start_hour, schedule_end_hour):
-            log_print(f"\n⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
-            log_print(f"⏰ 不在运行时间范围内（{schedule_start_hour}:00 - {schedule_end_hour}:00）")
-            
-            # 生成随机运行时间（在指定时间范围内）
-            random_time = get_random_time_in_range(schedule_start_hour, schedule_end_hour)
-            log_print(f"⏰ 将在 {random_time.strftime('%Y-%m-%d %H:%M:%S')} 随机运行")
-            
-            # 等待到随机时间
-            wait_until_time(random_time.hour, random_time.minute)
-        else:
-            # 在时间范围内，计算到结束时间还剩多少时间
-            end_time = now.replace(hour=schedule_end_hour, minute=0, second=0, microsecond=0)
-            remaining_seconds = (end_time - now).total_seconds()
-            remaining_minutes = int(remaining_seconds / 60)
-            
-            # 随机延迟，但不超过剩余时间（最多延迟30分钟或剩余时间的一半，取较小值）
-            max_delay_minutes = min(30, max(1, remaining_minutes // 2))
-            random_delay_minutes = random.randint(0, max_delay_minutes)
-            random_delay_seconds = random_delay_minutes * 60 + random.randint(0, 59)
-            
-            # 确保不会超过结束时间
-            if random_delay_seconds > remaining_seconds:
-                random_delay_seconds = max(0, int(remaining_seconds) - 60)  # 至少提前1分钟
-            
-            log_print(f"\n⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
-            log_print(f"⏰ 在运行时间范围内（{schedule_start_hour}:00 - {schedule_end_hour}:00）")
-            log_print(f"⏰ 距离结束时间还有 {remaining_minutes} 分钟")
-            log_print(f"⏰ 随机延迟 {random_delay_minutes} 分钟后运行")
-            
-            if random_delay_seconds > 0:
-                log_print(f"⏰ 等待 {random_delay_seconds} 秒...")
-                time.sleep(random_delay_seconds)
-            
-            log_print(f"✓ 开始执行: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # 使用已加载的Cookie（已在函数开头加载）
     
@@ -733,67 +897,118 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
         """)
         return
     
-    log_print(f"\n✓ 加载了 {len(cookies)} 个Cookie")
-    log_print(f"✓ 将使用 {len(cookies)} 个线程并发执行，互不影响")
-    log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes_per_day} 次\n")
-    
-    # 配置参数
-    limit = 40
-    want_it_ranking_type = 2
-    # 增加延迟时间，模拟真实人类操作速度（2-4秒之间随机）
-    delay = random.uniform(2.0, 4.0)  # 每次请求间隔2-4秒，更符合人类操作速度
-    
-    # 使用线程池并发执行
-    all_results = []
-    total_stats = {"total": 0, "success": 0, "fail": 0, "skipped": 0}
-    
-    with ThreadPoolExecutor(max_workers=len(cookies)) as executor:
-        # 提交所有任务
-        future_to_cookie = {
-            executor.submit(run_single_cookie, cookie, idx + 1, limit, want_it_ranking_type, delay, max_votes_per_day): (idx + 1, cookie)
-            for idx, cookie in enumerate(cookies)
-        }
+    # 执行爬虫任务
+    def execute_crawler_tasks(cookies_list: List[str], max_votes: int):
+        """执行爬虫任务的内部函数"""
+        log_print(f"\n✓ 加载了 {len(cookies_list)} 个Cookie")
+        log_print(f"✓ 将使用 {len(cookies_list)} 个线程并发执行，互不影响")
+        log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes} 次\n")
         
-        # 等待所有任务完成
-        for future in as_completed(future_to_cookie):
-            thread_id, cookie = future_to_cookie[future]
-            try:
-                result = future.result()
-                all_results.append({
-                    "thread_id": thread_id,
-                    "result": result
-                })
-                # 汇总统计
-                total_stats["total"] += result.get("total", 0)
-                total_stats["success"] += result.get("success", 0)
-                total_stats["fail"] += result.get("fail", 0)
-                total_stats["skipped"] += result.get("skipped", 0)
-            except Exception as e:
-                thread_safe_print(f"[线程{thread_id}] ✗ 任务执行异常: {e}")
+        # 配置参数
+        limit = 40
+        want_it_ranking_type = 2
+        # 增加延迟时间，模拟真实人类操作速度（2-4秒之间随机）
+        delay = random.uniform(2.0, 4.0)  # 每次请求间隔2-4秒，更符合人类操作速度
+        
+        # 使用线程池并发执行
+        all_results = []
+        total_stats = {"total": 0, "success": 0, "fail": 0, "skipped": 0}
+        
+        with ThreadPoolExecutor(max_workers=len(cookies_list)) as executor:
+            # 提交所有任务
+            future_to_cookie = {
+                executor.submit(run_single_cookie, cookie, idx + 1, limit, want_it_ranking_type, delay, max_votes): (idx + 1, cookie)
+                for idx, cookie in enumerate(cookies_list)
+            }
+            
+            # 等待所有任务完成
+            for future in as_completed(future_to_cookie):
+                thread_id, cookie = future_to_cookie[future]
+                try:
+                    result = future.result()
+                    all_results.append({
+                        "thread_id": thread_id,
+                        "result": result
+                    })
+                    # 汇总统计
+                    total_stats["total"] += result.get("total", 0)
+                    total_stats["success"] += result.get("success", 0)
+                    total_stats["fail"] += result.get("fail", 0)
+                    total_stats["skipped"] += result.get("skipped", 0)
+                except Exception as e:
+                    thread_safe_print(f"[线程{thread_id}] ✗ 任务执行异常: {e}")
+        
+        # 打印最终汇总结果
+        log_print("\n" + "=" * 60)
+        log_print("所有线程执行完成 - 最终统计")
+        log_print("=" * 60)
+        log_print(f"并发线程数: {len(cookies_list)}")
+        log_print(f"总计处理: {total_stats['total']} 个")
+        log_print(f"成功: {total_stats['success']} 个")
+        log_print(f"失败: {total_stats['fail']} 个")
+        if total_stats.get('skipped', 0) > 0:
+            log_print(f"跳过: {total_stats['skipped']} 个（超过每日限制）")
+        if total_stats['total'] > 0:
+            success_rate = (total_stats['success'] / total_stats['total']) * 100
+            log_print(f"成功率: {success_rate:.2f}%")
+        log_print("=" * 60)
+        
+        # 打印每个线程的详细结果
+        log_print("\n各线程执行详情:")
+        for item in all_results:
+            thread_id = item["thread_id"]
+            result = item["result"]
+            skipped_info = f", 跳过={result.get('skipped', 0)}" if result.get('skipped', 0) > 0 else ""
+            balance_info = ", 余额不足" if result.get('insufficient_balance', False) else ""
+            log_print(f"  线程{thread_id}: 总计={result.get('total', 0)}, "
+                  f"成功={result.get('success', 0)}, 失败={result.get('fail', 0)}{skipped_info}{balance_info}")
     
-    # 打印最终汇总结果
-    log_print("\n" + "=" * 60)
-    log_print("所有线程执行完成 - 最终统计")
-    log_print("=" * 60)
-    log_print(f"并发线程数: {len(cookies)}")
-    log_print(f"总计处理: {total_stats['total']} 个")
-    log_print(f"成功: {total_stats['success']} 个")
-    log_print(f"失败: {total_stats['fail']} 个")
-    if total_stats.get('skipped', 0) > 0:
-        log_print(f"跳过: {total_stats['skipped']} 个（超过每日限制）")
-    if total_stats['total'] > 0:
-        success_rate = (total_stats['success'] / total_stats['total']) * 100
-        log_print(f"成功率: {success_rate:.2f}%")
-    log_print("=" * 60)
+    # 执行第一次任务
+    execute_crawler_tasks(cookies, max_votes_per_day)
     
-    # 打印每个线程的详细结果
-    log_print("\n各线程执行详情:")
-    for item in all_results:
-        thread_id = item["thread_id"]
-        result = item["result"]
-        skipped_info = f", 跳过={result.get('skipped', 0)}" if result.get('skipped', 0) > 0 else ""
-        log_print(f"  线程{thread_id}: 总计={result.get('total', 0)}, "
-              f"成功={result.get('success', 0)}, 失败={result.get('fail', 0)}{skipped_info}")
+    # 标记第一次执行已完成
+    if is_first_run:
+        try:
+            first_run_flag_file.touch()
+            log_print(f"\n✓ 已标记首次执行完成，后续将按时间控制执行")
+        except Exception as e:
+            log_print(f"\n⚠️  无法创建首次执行标志文件: {e}")
+    
+    # 如果启用了定时任务，进入循环等待下一天执行
+    if schedule_enabled:
+        while True:
+            # 检查当前时间是否在运行时间范围内
+            now = datetime.now()
+            if not is_in_time_range(schedule_start_hour, schedule_end_hour):
+                log_print(f"\n⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+                log_print(f"⏰ 不在运行时间范围内（{schedule_start_hour}:00 - {schedule_end_hour}:00）")
+                
+                # 生成随机运行时间（在指定时间范围内）
+                random_time = get_random_time_in_range(schedule_start_hour, schedule_end_hour)
+                log_print(f"⏰ 将在 {random_time.strftime('%Y-%m-%d %H:%M:%S')} 随机运行")
+                
+                # 等待到随机时间
+                wait_until_time(random_time.hour, random_time.minute)
+                log_print(f"✓ 开始执行: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            else:
+                # 在时间范围内，立即执行
+                log_print(f"\n⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+                log_print(f"⏰ 在运行时间范围内（{schedule_start_hour}:00 - {schedule_end_hour}:00）")
+                log_print("✓ 立即开始执行")
+            
+            # 重新加载配置（可能Cookie有更新）
+            config = load_config_from_file("cookies.json")
+            cookies = config.get("cookies", [])
+            max_votes_per_day = config.get("max_votes_per_day", 10)
+            
+            if not cookies:
+                log_print("\n⚠️  警告: 未找到有效的Cookie！")
+                log_print("等待1小时后重试...")
+                time.sleep(3600)
+                continue
+            
+            # 执行爬虫任务（每个线程独立运行，余额不足只影响对应线程）
+            execute_crawler_tasks(cookies, max_votes_per_day)
 
 
 if __name__ == "__main__":
