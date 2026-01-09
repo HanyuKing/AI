@@ -9,8 +9,8 @@
   ],
   "schedule": {
     "enabled": true,
-    "start_hour": 10,
-    "end_hour": 11,
+    "start_hour": 4,
+    "end_hour": 12,
     "note": "定时任务配置：enabled=true启用定时任务，start_hour和end_hour设置运行时间范围（24小时制，0-23）"
   },
   "max_votes_per_day": 10,
