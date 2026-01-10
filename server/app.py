@@ -3,8 +3,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
-from starlette.middleware.sessions import SessionMiddleware
-import secrets
 
 from server.core.config import settings
 from server.core.exceptions import global_exception_handler
@@ -14,13 +12,6 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description="A Swiss Army Knife for Developers and Office Workers"
-)
-
-# Session中间件（用于登录功能）
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=secrets.token_urlsafe(32),
-    max_age=86400  # 24小时
 )
 
 # CORS
@@ -47,7 +38,7 @@ app.include_router(dev_tools.router, prefix="/api/dev", tags=["Dev Tools"])
 app.include_router(utils_tools.router, prefix="/api/utils", tags=["Utilities"])
 app.include_router(general.router, prefix="/api/general", tags=["General"])
 app.include_router(websocket.router, tags=["WebSocket"])
-# 爬虫管理路由（隐藏入口，不显示在API文档中）
+# 管理路由（隐藏入口，不显示在API文档中）
 app.include_router(crawler_admin.router, tags=["Crawler Admin"])
 
 # --- Frontend Routes ---
