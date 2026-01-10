@@ -38,7 +38,7 @@ app.include_router(dev_tools.router, prefix="/api/dev", tags=["Dev Tools"])
 app.include_router(utils_tools.router, prefix="/api/utils", tags=["Utilities"])
 app.include_router(general.router, prefix="/api/general", tags=["General"])
 app.include_router(websocket.router, tags=["WebSocket"])
-# 管理路由（隐藏入口，不显示在API文档中）
+# 爬虫管理路由（隐藏入口，不显示在API文档中）
 app.include_router(crawler_admin.router, tags=["Crawler Admin"])
 
 # --- Frontend Routes ---
