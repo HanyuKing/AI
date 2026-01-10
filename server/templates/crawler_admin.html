@@ -325,11 +325,17 @@
             return;
         }
 
-        // 加载配置和状态
-        await loadConfig();
-        await loadCookies();
-        await refreshStatus();
-        await refreshLogs();
+        // 并行加载配置、状态和Cookie列表（提高加载速度）
+        await Promise.all([
+            loadConfig(),
+            refreshStatus(),  // status接口已经包含投票统计，不需要单独调用
+            loadCookies()
+        ]);
+        
+        // 延迟加载日志（非关键数据，可以稍后加载）
+        setTimeout(() => {
+            refreshLogs();
+        }, 500);
         
         // 定时刷新状态和日志（避免重复设置）
         if (!window.refreshIntervalsSet) {
@@ -364,16 +370,25 @@
             // 认证成功，隐藏登录模态框
             document.getElementById('loginModal').style.display = 'none';
             
-            // 加载配置和状态
-            await loadConfig();
-            await loadCookies();
-            await refreshStatus();
-            await refreshLogs();
+            // 并行加载配置、状态和Cookie列表（提高加载速度）
+            await Promise.all([
+                loadConfig(),
+                refreshStatus(),
+                loadCookies()
+            ]);
             
-            // 定时刷新状态和日志
-            setInterval(refreshStatus, 10000); // 每10秒刷新状态
-            setInterval(loadCookies, 30000); // 每30秒刷新Cookie列表
-            setInterval(refreshLogs, 30000); // 每30秒刷新日志
+            // 延迟加载日志（非关键数据，可以稍后加载）
+            setTimeout(() => {
+                refreshLogs();
+            }, 500);
+            
+            // 定时刷新状态和日志（避免重复设置）
+            if (!window.refreshIntervalsSet) {
+                setInterval(refreshStatus, 10000); // 每10秒刷新状态
+                setInterval(loadCookies, 30000); // 每30秒刷新Cookie列表
+                setInterval(refreshLogs, 30000); // 每30秒刷新日志
+                window.refreshIntervalsSet = true;
+            }
         } catch (error) {
             alert('用户名或密码错误，请重试');
             document.getElementById('login-password').value = '';
@@ -437,11 +452,8 @@
                 tbody.innerHTML = cookies.map((cookie, index) => {
                     // Cookie预览（只显示前30字符）
                     const cookiePreview = cookie.cookie.length > 30 ? cookie.cookie.substring(0, 30) + '...' : cookie.cookie;
-                    // 获取今日投票详情
-                    const todayLogs = (cookie.vote_logs || []).filter(log => {
-                        const today = new Date().toISOString().split('T')[0];
-                        return log.date === today;
-                    });
+                    // 检查是否有今日投票记录（使用后端返回的标记）
+                    const hasTodayLogs = cookie.has_today_logs || false;
                     
                     return `
                         <tr class="hover:bg-gray-50">
@@ -454,7 +466,7 @@
                             <td class="border border-gray-300 px-4 py-2 text-center">
                                 <div>
                                     <span class="font-semibold">${cookie.today_votes || 0}</span>
-                                    ${todayLogs.length > 0 ? `
+                                    ${hasTodayLogs ? `
                                         <button onclick="showTodayVotes('${cookie.id}', '${escapeHtml(cookie.name)}')" 
                                             class="ml-2 text-blue-600 hover:text-blue-800 text-xs">查看详情</button>
                                     ` : ''}

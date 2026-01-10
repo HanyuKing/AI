@@ -183,12 +183,13 @@ class CrawlerAdminService:
                     "index": idx
                 })
         
-        # 获取每个Cookie的投票统计
+        # 获取每个Cookie的投票统计（只获取今日投票数，不加载完整日志以提高性能）
         today = datetime.now().strftime("%Y-%m-%d")
         for cookie_info in cookie_list:
             vote_file = self.data_dir / f"vote_count_{cookie_info['id']}.json"
             cookie_info["today_votes"] = 0
-            cookie_info["vote_logs"] = []
+            # 不在这里加载完整日志，只标记是否有今日投票记录（用于前端判断是否显示"查看详情"按钮）
+            cookie_info["has_today_logs"] = False
             
             if vote_file.exists():
                 try:
@@ -197,8 +198,9 @@ class CrawlerAdminService:
                         # 获取今日投票数
                         if data.get("date") == today:
                             cookie_info["today_votes"] = data.get("count", 0)
-                        # 获取投票日志（如果有）
-                        cookie_info["vote_logs"] = data.get("logs", [])
+                            # 检查是否有今日日志（只检查是否存在，不加载完整数据）
+                            logs = data.get("logs", [])
+                            cookie_info["has_today_logs"] = any(log.get("date") == today for log in logs)
                 except Exception:
                     pass
         
