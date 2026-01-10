@@ -1,14 +1,15 @@
 from fastapi import APIRouter, HTTPException, Response
 from server.schemas.feedback import FeedbackRequest
 from server.services.feedback_service import feedback_service
-from server.services.bing_service import bing_service
+# from server.services.bing_service import bing_service  # 已禁用
 
 router = APIRouter()
 
-@router.get("/bing/wallpaper")
-async def get_bing_wallpaper():
-    """Get Bing daily wallpaper metadata"""
-    return await bing_service.get_wallpaper()
+# Bing壁纸功能已禁用
+# @router.get("/bing/wallpaper")
+# async def get_bing_wallpaper():
+#     """Get Bing daily wallpaper metadata"""
+#     return await bing_service.get_wallpaper()
 
 
 
