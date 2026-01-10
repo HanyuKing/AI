@@ -186,11 +186,24 @@
     </footer>
 
     <script>
-
         let bingWallpaperUrl = '';
 
-        // Fetch and set Bing Wallpaper
-        async function initWallpaper() {
+        // 异步加载Bing壁纸，不阻塞页面渲染
+        // 使用requestIdleCallback或setTimeout确保在页面加载完成后再加载壁纸
+        function initWallpaper() {
+            // 延迟加载，确保页面主要内容已渲染
+            if (document.readyState === 'loading') {
+                // 页面还在加载，等待DOMContentLoaded后再延迟加载
+                document.addEventListener('DOMContentLoaded', () => {
+                    setTimeout(loadWallpaper, 100);
+                });
+            } else {
+                // 页面已加载，直接延迟加载
+                setTimeout(loadWallpaper, 100);
+            }
+        }
+
+        async function loadWallpaper() {
             try {
                 const response = await fetch('/api/general/bing/wallpaper');
                 if (response.ok) {
@@ -198,16 +211,21 @@
                     if (data.url) {
                         bingWallpaperUrl = data.url;
                         const bg = document.getElementById('bing-bg');
-                        bg.style.backgroundImage = `url('${data.url}')`;
+                        if (bg) {
+                            // 使用CSS transition实现平滑过渡
+                            bg.style.transition = 'background-image 0.5s ease-in-out';
+                            bg.style.backgroundImage = `url('${data.url}')`;
 
-                        // Update copyright info
-                        const copyright = document.getElementById('bg-copyright');
-                        if (copyright && data.copyright) {
-                            copyright.textContent = `Image: ${data.copyright}`;
+                            // Update copyright info
+                            const copyright = document.getElementById('bg-copyright');
+                            if (copyright && data.copyright) {
+                                copyright.textContent = `Image: ${data.copyright}`;
+                            }
                         }
                     }
                 }
             } catch (e) {
+                // 静默失败，不影响页面
                 console.error("Failed to load Bing wallpaper", e);
             }
         }
@@ -237,8 +255,8 @@
             }
         }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', initWallpaper);
+        // 页面加载后异步初始化壁纸（不阻塞）
+        initWallpaper();
     </script>
 
     {% block scripts %}{% endblock %}
