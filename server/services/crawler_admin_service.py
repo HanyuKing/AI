@@ -344,7 +344,7 @@ class CrawlerAdminService:
         # 检查是否已在运行
         status = self.get_status()
         if status["is_running"]:
-            return {"success": False, "error": "爬虫已在运行中"}
+            return {"success": False, "error": "已在运行中"}
         
         try:
             # 使用nohup后台启动
@@ -371,7 +371,7 @@ class CrawlerAdminService:
             
             return {
                 "success": True,
-                "message": "爬虫启动成功",
+                "message": "启动成功",
                 "pid": process.pid
             }
         except Exception as e:
@@ -382,7 +382,7 @@ class CrawlerAdminService:
         status = self.get_status()
         
         if not status["is_running"]:
-            return {"success": False, "error": "爬虫未运行"}
+            return {"success": False, "error": "未运行"}
         
         try:
             pid = status["pid"]
@@ -409,7 +409,7 @@ class CrawlerAdminService:
             if self.pid_file.exists():
                 self.pid_file.unlink()
             
-            return {"success": True, "message": "爬虫已停止"}
+            return {"success": True, "message": "已停止"}
         except Exception as e:
             return {"success": False, "error": str(e)}
     

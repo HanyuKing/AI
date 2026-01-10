@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}爬虫管理{% endblock %}
+{% block title %}管理{% endblock %}
 
 {% block head %}
 <style>
@@ -79,8 +79,8 @@
 {% block content %}
 <div class="max-w-6xl mx-auto">
     <div class="glass p-6 mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">爬虫管理</h1>
-        <p class="text-gray-600">管理爬虫配置、Cookie、运行状态等</p>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">管理</h1>
+        <p class="text-gray-600">管理配置、Cookie、运行状态等</p>
     </div>
 
     <!-- 运行状态卡片 -->
@@ -105,11 +105,11 @@
         <div class="flex gap-2">
             <button onclick="startCrawler()" 
                 class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                启动爬虫
+                启动
             </button>
             <button onclick="stopCrawler()" 
                 class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                停止爬虫
+                停止
             </button>
             <button onclick="refreshStatus()" 
                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
@@ -743,9 +743,9 @@
         }
     }
 
-    // 启动爬虫
+    // 启动
     async function startCrawler() {
-        if (!confirm('确定要启动爬虫吗？')) return;
+        if (!confirm('确定要启动吗？')) return;
         
         try {
             const response = await authFetch('/api/admin/crawler/start', {
@@ -755,7 +755,7 @@
             const result = await response.json();
             
             if (result.success) {
-                alert('爬虫启动成功！');
+                alert('启动成功！');
                 setTimeout(refreshStatus, 1000);
             } else {
                 alert('启动失败: ' + (result.error || '未知错误'));
@@ -765,9 +765,9 @@
         }
     }
 
-    // 停止爬虫
+    // 停止
     async function stopCrawler() {
-        if (!confirm('确定要停止爬虫吗？')) return;
+        if (!confirm('确定要停止吗？')) return;
         
         try {
             const response = await authFetch('/api/admin/crawler/stop', {
@@ -777,7 +777,7 @@
             const result = await response.json();
             
             if (result.success) {
-                alert('爬虫已停止！');
+                alert('已停止！');
                 setTimeout(refreshStatus, 1000);
             } else {
                 alert('停止失败: ' + (result.error || '未知错误'));
