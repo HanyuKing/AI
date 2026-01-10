@@ -385,10 +385,22 @@
         }
     });
 
+    // 统一的fetch包装，处理401错误
+    async function apiFetch(url, options = {}) {
+        const response = await fetch(url, options);
+        if (response.status === 401) {
+            // 未授权，显示登录框
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('loginModal').style.display = 'block';
+            throw new Error('需要登录');
+        }
+        return response;
+    }
+
     // 加载配置
     async function loadConfig() {
         try {
-            const response = await fetch('/api/admin/crawler/config');
+            const response = await apiFetch('/api/admin/crawler/config');
             const data = await response.json();
             
             if (data.success) {
@@ -408,7 +420,7 @@
     // 加载Cookie列表
     async function loadCookies() {
         try {
-            const response = await fetch('/api/admin/crawler/cookies');
+            const response = await apiFetch('/api/admin/crawler/cookies');
             const data = await response.json();
             
             if (data.success) {
@@ -478,7 +490,7 @@
             formData.append('name', name);
             formData.append('cookie', cookie);
             
-            const response = await fetch('/api/admin/crawler/cookies', {
+            const response = await apiFetch('/api/admin/crawler/cookies', {
                 method: 'POST',
                 body: formData
             });
@@ -544,7 +556,7 @@
             formData.append('name', name);
             formData.append('cookie', cookie);
             
-            const response = await fetch(`/api/admin/crawler/cookies/${index}`, {
+            const response = await apiFetch(`/api/admin/crawler/cookies/${index}`, {
                 method: 'PUT',
                 body: formData
             });
@@ -567,7 +579,7 @@
         if (!confirm(`确定要删除Cookie "${name}" 吗？\n注意：删除后对应的投票日志也会被删除。`)) return;
         
         try {
-            const response = await fetch(`/api/admin/crawler/cookies/${index}`, {
+            const response = await apiFetch(`/api/admin/crawler/cookies/${index}`, {
                 method: 'DELETE'
             });
             
@@ -587,7 +599,7 @@
     // 显示今日投票详情
     async function showTodayVotes(cookieId, cookieName) {
         try {
-            const response = await fetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=1`);
+            const response = await apiFetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=1`);
             const result = await response.json();
             
             if (result.success) {
@@ -624,7 +636,7 @@
     // 显示历史投票日志
     async function showVoteLogs(cookieId, cookieName) {
         try {
-            const response = await fetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=30`);
+            const response = await apiFetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=30`);
             const result = await response.json();
             
             if (result.success) {
@@ -690,7 +702,7 @@
         formData.append('max_votes_per_day', maxVotes);
 
         try {
-            const response = await fetch('/api/admin/crawler/config', {
+            const response = await apiFetch('/api/admin/crawler/config', {
                 method: 'POST',
                 body: formData
             });
@@ -711,7 +723,7 @@
     // 刷新状态
     async function refreshStatus() {
         try {
-            const response = await fetch('/api/admin/crawler/status');
+            const response = await apiFetch('/api/admin/crawler/status');
             const data = await response.json();
             
             if (data.success) {
@@ -742,7 +754,7 @@
         if (!confirm('确定要启动吗？')) return;
         
         try {
-            const response = await fetch('/api/admin/crawler/start', {
+            const response = await apiFetch('/api/admin/crawler/start', {
                 method: 'POST'
             });
             
@@ -764,7 +776,7 @@
         if (!confirm('确定要停止吗？')) return;
         
         try {
-            const response = await fetch('/api/admin/crawler/stop', {
+            const response = await apiFetch('/api/admin/crawler/stop', {
                 method: 'POST'
             });
             
@@ -784,7 +796,7 @@
     // 刷新日志
     async function refreshLogs() {
         try {
-            const response = await fetch('/api/admin/crawler/logs?lines=100');
+            const response = await apiFetch('/api/admin/crawler/logs?lines=100');
             const result = await response.json();
             
             if (result.success) {
@@ -809,7 +821,7 @@
         if (!confirm('确定要清空日志吗？')) return;
         
         try {
-            const response = await fetch('/api/admin/crawler/logs/clear', {
+            const response = await apiFetch('/api/admin/crawler/logs/clear', {
                 method: 'POST'
             });
             
