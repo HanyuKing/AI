@@ -415,6 +415,26 @@ class CrawlerAdminService:
         except Exception as e:
             return {"success": False, "error": str(e)}
     
+    def restart_crawler(self) -> Dict[str, Any]:
+        """重启爬虫"""
+        import time
+        
+        # 先停止
+        stop_result = self.stop_crawler()
+        if not stop_result["success"]:
+            # 如果未运行，直接启动
+            if "未运行" in stop_result.get("error", ""):
+                return self.start_crawler()
+            # 其他错误返回
+            return stop_result
+        
+        # 等待1秒确保进程完全停止
+        time.sleep(1)
+        
+        # 再启动
+        start_result = self.start_crawler()
+        return start_result
+    
     def get_logs(self, lines: int = 100) -> Dict[str, Any]:
         """获取日志内容"""
         if not self.log_file.exists():

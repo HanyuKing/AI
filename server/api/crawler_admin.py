@@ -134,6 +134,14 @@ async def stop_crawler(request: Request):
     return result
 
 
+@router.post("/api/admin/crawler/restart")
+async def restart_crawler(request: Request):
+    """重启"""
+    require_login(request)
+    result = crawler_admin_service.restart_crawler()
+    return result
+
+
 @router.get("/api/admin/crawler/logs")
 async def get_logs(request: Request, lines: int = 100):
     """获取日志"""
