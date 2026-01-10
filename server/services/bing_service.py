@@ -24,8 +24,8 @@ class BingService:
         
         # 检查内存缓存（同一天）
         if self._memory_cache and self._cache_date == today:
-            return self._memory_cache
-        
+                return self._memory_cache
+
         # 检查文件缓存
         if self.cache_file.exists():
             try:

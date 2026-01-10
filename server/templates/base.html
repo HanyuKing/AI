@@ -219,12 +219,12 @@
                         if (bg) {
                             // 使用CSS transition实现平滑过渡
                             bg.style.transition = 'background-image 0.5s ease-in-out';
-                            bg.style.backgroundImage = `url('${data.url}')`;
+                        bg.style.backgroundImage = `url('${data.url}')`;
 
-                            // Update copyright info
-                            const copyright = document.getElementById('bg-copyright');
-                            if (copyright && data.copyright) {
-                                copyright.textContent = `Image: ${data.copyright}`;
+                        // Update copyright info
+                        const copyright = document.getElementById('bg-copyright');
+                        if (copyright && data.copyright) {
+                            copyright.textContent = `Image: ${data.copyright}`;
                             }
                         }
                     }

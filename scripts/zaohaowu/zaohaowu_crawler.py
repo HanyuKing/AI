@@ -824,9 +824,105 @@ def load_cookies_from_file(file_path: str = "cookies.json") -> List[str]:
     return cookie_list
 
 
+def run_single_cookie_loop(cookie: str, thread_id: int, limit: int = 40, want_it_ranking_type: int = 2, delay: float = 0.5, max_votes_per_day: int = 10, start_hour: int = 7, end_hour: int = 9, schedule_enabled: bool = True):
+    """
+    使用单个Cookie运行爬虫（独立循环，每个线程独立控制时间）
+    
+    Args:
+        cookie: 单个Cookie
+        thread_id: 线程ID
+        limit: 排行榜返回数量限制
+        want_it_ranking_type: 排行榜类型
+        delay: 每次请求之间的延迟（秒）
+        max_votes_per_day: 每天最大投票数（默认10次）
+        start_hour: 运行开始时间（24小时制）
+        end_hour: 运行结束时间（24小时制）
+        schedule_enabled: 是否启用定时任务
+    """
+    thread_safe_print(f"[线程{thread_id}] 🚀 线程启动，开始独立循环执行")
+    
+    # 首次启动立即执行
+    first_run = True
+    
+    while True:
+        try:
+            # 如果不是首次运行且启用了定时任务，需要等待到时间范围内
+            if not first_run and schedule_enabled:
+                now = datetime.now()
+                # 检查当前时间是否在运行时间范围内
+                if not is_in_time_range(start_hour, end_hour):
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 不在运行时间范围内（{start_hour}:00 - {end_hour}:00）")
+                    
+                    # 生成随机运行时间（在指定时间范围内）
+                    random_time = get_random_time_in_range(start_hour, end_hour)
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 将在 {random_time.strftime('%Y-%m-%d %H:%M:%S')} 随机运行")
+                    
+                    # 等待到随机时间
+                    wait_seconds = (random_time - now).total_seconds()
+                    if wait_seconds > 0:
+                        wait_hours = wait_seconds / 3600
+                        thread_safe_print(f"[线程{thread_id}] ⏰ 等待时间: {wait_hours:.2f} 小时 ({wait_seconds:.0f} 秒)")
+                        thread_safe_print(f"[线程{thread_id}] ⏰ 等待中...")
+                        time.sleep(wait_seconds)
+                        thread_safe_print(f"[线程{thread_id}] ✓ 到达目标时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                else:
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 在运行时间范围内（{start_hour}:00 - {end_hour}:00）")
+            
+            # 执行爬虫任务
+            with ZaoHaoWuCrawler(cookie=cookie, thread_id=thread_id, max_votes_per_day=max_votes_per_day) as crawler:
+                result = crawler.run(
+                    limit=limit,
+                    want_it_ranking_type=want_it_ranking_type,
+                    delay=delay
+                )
+                
+                # 检查是否投票完成或余额不足
+                insufficient_balance = result.get("insufficient_balance", False)
+                final_vote_count = crawler._get_today_vote_count()
+                votes_completed = final_vote_count >= max_votes_per_day
+                
+                if insufficient_balance:
+                    thread_safe_print(f"[线程{thread_id}] ⚠️  余额不足，线程停止，等待下一次任务执行")
+                elif votes_completed:
+                    thread_safe_print(f"[线程{thread_id}] ✓ 今日投票已完成（{final_vote_count}/{max_votes_per_day}），线程停止，等待下一次任务执行")
+                else:
+                    thread_safe_print(f"[线程{thread_id}] ✓ 本次执行完成，等待下一次任务执行")
+                
+                # 如果启用了定时任务，等待到下一个时间窗口
+                if schedule_enabled:
+                    # 生成下一个随机执行时间（在时间范围内）
+                    now = datetime.now()
+                    random_time = get_random_time_in_range(start_hour, end_hour)
+                    
+                    # 如果随机时间已过，设置为明天
+                    if random_time <= now:
+                        random_time += timedelta(days=1)
+                    
+                    wait_seconds = (random_time - now).total_seconds()
+                    wait_hours = wait_seconds / 3600
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 下次执行时间: {random_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 等待时间: {wait_hours:.2f} 小时 ({wait_seconds:.0f} 秒)")
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 等待中...")
+                    time.sleep(wait_seconds)
+                else:
+                    # 未启用定时任务，等待1小时后重试
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 定时任务未启用，等待1小时后重试...")
+                    time.sleep(3600)
+            
+            first_run = False
+            
+        except Exception as e:
+            thread_safe_print(f"[线程{thread_id}] ✗ 执行异常: {e}")
+            thread_safe_print(f"[线程{thread_id}] ⏰ 等待1小时后重试...")
+            time.sleep(3600)
+            first_run = False
+
+
 def run_single_cookie(cookie: str, thread_id: int, limit: int = 40, want_it_ranking_type: int = 2, delay: float = 0.5, max_votes_per_day: int = 10) -> Dict[str, Any]:
     """
-    使用单个Cookie运行爬虫（用于并发执行）
+    使用单个Cookie运行爬虫（单次执行，用于向后兼容）
     
     Args:
         cookie: 单个Cookie
@@ -979,128 +1075,75 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
         """)
         return
     
-    # 执行爬虫任务
-    def execute_crawler_tasks(cookies_list: List[Any], max_votes: int):
-        """执行爬虫任务的内部函数"""
-        # 转换为字符串列表（兼容新旧格式）
-        cookie_strings = []
-        for item in cookies_list:
-            if isinstance(item, str):
-                cookie_strings.append(item)
-            elif isinstance(item, dict):
-                cookie_strings.append(item.get("cookie", ""))
-        
-        cookie_strings = [c for c in cookie_strings if c]  # 过滤空字符串
-        
-        log_print(f"\n✓ 加载了 {len(cookie_strings)} 个Cookie")
-        log_print(f"✓ 将使用 {len(cookie_strings)} 个线程并发执行，互不影响")
-        log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes} 次\n")
-        
-        # 配置参数
-        limit = 40
-        want_it_ranking_type = 2
-        # 增加延迟时间，模拟真实人类操作速度（2-4秒之间随机）
-        delay = random.uniform(2.0, 4.0)  # 每次请求间隔2-4秒，更符合人类操作速度
-        
-        # 使用线程池并发执行
-        all_results = []
-        total_stats = {"total": 0, "success": 0, "fail": 0, "skipped": 0}
-        
-        with ThreadPoolExecutor(max_workers=len(cookie_strings)) as executor:
-            # 提交所有任务
-            future_to_cookie = {
-                executor.submit(run_single_cookie, cookie, idx + 1, limit, want_it_ranking_type, delay, max_votes): (idx + 1, cookie)
-                for idx, cookie in enumerate(cookie_strings)
-            }
-            
-            # 等待所有任务完成
-            for future in as_completed(future_to_cookie):
-                thread_id, cookie = future_to_cookie[future]
-                try:
-                    result = future.result()
-                    all_results.append({
-                        "thread_id": thread_id,
-                        "result": result
-                    })
-                    # 汇总统计
-                    total_stats["total"] += result.get("total", 0)
-                    total_stats["success"] += result.get("success", 0)
-                    total_stats["fail"] += result.get("fail", 0)
-                    total_stats["skipped"] += result.get("skipped", 0)
-                except Exception as e:
-                    thread_safe_print(f"[线程{thread_id}] ✗ 任务执行异常: {e}")
-        
-        # 打印最终汇总结果
-        log_print("\n" + "=" * 60)
-        log_print("所有线程执行完成 - 最终统计")
-        log_print("=" * 60)
-        log_print(f"并发线程数: {len(cookie_strings)}")
-        log_print(f"总计处理: {total_stats['total']} 个")
-        log_print(f"成功: {total_stats['success']} 个")
-        log_print(f"失败: {total_stats['fail']} 个")
-        if total_stats.get('skipped', 0) > 0:
-            log_print(f"跳过: {total_stats['skipped']} 个（超过每日限制）")
-        if total_stats['total'] > 0:
-            success_rate = (total_stats['success'] / total_stats['total']) * 100
-            log_print(f"成功率: {success_rate:.2f}%")
-        log_print("=" * 60)
-        
-        # 打印每个线程的详细结果
-        log_print("\n各线程执行详情:")
-        for item in all_results:
-            thread_id = item["thread_id"]
-            result = item["result"]
-            skipped_info = f", 跳过={result.get('skipped', 0)}" if result.get('skipped', 0) > 0 else ""
-            balance_info = ", 余额不足" if result.get('insufficient_balance', False) else ""
-            log_print(f"  线程{thread_id}: 总计={result.get('total', 0)}, "
-                  f"成功={result.get('success', 0)}, 失败={result.get('fail', 0)}{skipped_info}{balance_info}")
+    # 转换为字符串列表（兼容新旧格式）
+    cookie_strings = []
+    for item in cookies:
+        if isinstance(item, str):
+            cookie_strings.append(item)
+        elif isinstance(item, dict):
+            cookie_strings.append(item.get("cookie", ""))
     
-    # 执行第一次任务
-    execute_crawler_tasks(cookies, max_votes_per_day)
+    cookie_strings = [c for c in cookie_strings if c]  # 过滤空字符串
     
-    # 标记第一次执行已完成
-    if is_first_run:
-        try:
-            first_run_flag_file.touch()
-            log_print(f"\n✓ 已标记首次执行完成，后续将按时间控制执行")
-        except Exception as e:
-            log_print(f"\n⚠️  无法创建首次执行标志文件: {e}")
+    if not cookie_strings:
+        log_print("\n⚠️  警告: 未找到有效的Cookie！")
+        log_print("请创建 cookies.json 文件并添加Cookie，格式如下：")
+        log_print("""
+{
+  "cookies": [
+    "你的Cookie1",
+    "你的Cookie2"
+  ]
+}
+        """)
+        return
     
-    # 如果启用了定时任务，进入循环等待下一天执行
+    log_print(f"\n✓ 加载了 {len(cookie_strings)} 个Cookie")
+    log_print(f"✓ 将使用 {len(cookie_strings)} 个线程并发执行，每个线程独立控制时间")
+    log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes_per_day} 次")
     if schedule_enabled:
-        while True:
-            # 检查当前时间是否在运行时间范围内
-            now = datetime.now()
-            if not is_in_time_range(schedule_start_hour, schedule_end_hour):
-                log_print(f"\n⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
-                log_print(f"⏰ 不在运行时间范围内（{schedule_start_hour}:00 - {schedule_end_hour}:00）")
-                
-                # 生成随机运行时间（在指定时间范围内）
-                random_time = get_random_time_in_range(schedule_start_hour, schedule_end_hour)
-                log_print(f"⏰ 将在 {random_time.strftime('%Y-%m-%d %H:%M:%S')} 随机运行")
-                
-                # 等待到随机时间
-                wait_until_time(random_time.hour, random_time.minute)
-                log_print(f"✓ 开始执行: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            else:
-                # 在时间范围内，立即执行
-                log_print(f"\n⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
-                log_print(f"⏰ 在运行时间范围内（{schedule_start_hour}:00 - {schedule_end_hour}:00）")
-                log_print("✓ 立即开始执行")
-            
-            # 重新加载配置（可能Cookie有更新）
-            config = load_config_from_file("cookies.json")
-            cookies = config.get("cookies", [])
-            max_votes_per_day = config.get("max_votes_per_day", 10)
-            
-            if not cookies:
-                log_print("\n⚠️  警告: 未找到有效的Cookie！")
-                log_print("等待1小时后重试...")
-                time.sleep(3600)
-                continue
-            
-            # 执行爬虫任务（每个线程独立运行，余额不足只影响对应线程）
-            execute_crawler_tasks(cookies, max_votes_per_day)
+        log_print(f"✓ 运行时间范围: {schedule_start_hour}:00 - {schedule_end_hour}:00（每个线程独立随机）")
+    log_print("")
+    
+    # 配置参数
+    limit = 40
+    want_it_ranking_type = 2
+    # 增加延迟时间，模拟真实人类操作速度（2-4秒之间随机）
+    delay = random.uniform(2.0, 4.0)  # 每次请求间隔2-4秒，更符合人类操作速度
+    
+    # 使用线程池并发执行，每个线程独立循环
+    with ThreadPoolExecutor(max_workers=len(cookie_strings)) as executor:
+        # 提交所有任务（每个线程独立循环）
+        futures = []
+        for idx, cookie in enumerate(cookie_strings):
+            future = executor.submit(
+                run_single_cookie_loop,
+                cookie,
+                idx + 1,
+                limit,
+                want_it_ranking_type,
+                delay,
+                max_votes_per_day,
+                schedule_start_hour,
+                schedule_end_hour,
+                schedule_enabled
+            )
+            futures.append(future)
+        
+        log_print(f"✓ 已启动 {len(futures)} 个线程，每个线程独立循环执行")
+        log_print("✓ 每个线程在投票完成或余额不足时会停止，等待下一次任务执行")
+        log_print("")
+        
+        # 等待所有线程（实际上会一直运行）
+        try:
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    log_print(f"⚠️  线程执行异常: {e}")
+        except KeyboardInterrupt:
+            log_print("\n⚠️  收到中断信号，正在停止所有线程...")
+            executor.shutdown(wait=False)
 
 
 if __name__ == "__main__":
