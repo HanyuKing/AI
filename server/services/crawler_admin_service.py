@@ -463,6 +463,22 @@ class CrawlerAdminService:
             return {"success": False, "error": str(e)}
 
 
-# 单例
-crawler_admin_service = CrawlerAdminService()
+# 延迟初始化单例（避免在应用启动时执行文件操作，影响主页性能）
+_crawler_admin_service_instance = None
+
+def get_crawler_admin_service():
+    """获取爬虫管理服务实例（延迟初始化）"""
+    global _crawler_admin_service_instance
+    if _crawler_admin_service_instance is None:
+        _crawler_admin_service_instance = CrawlerAdminService()
+    return _crawler_admin_service_instance
+
+# 为了向后兼容，保留 crawler_admin_service 属性
+# 但改为延迟加载
+class LazyService:
+    def __getattr__(self, name):
+        service = get_crawler_admin_service()
+        return getattr(service, name)
+
+crawler_admin_service = LazyService()
 
