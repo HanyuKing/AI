@@ -63,31 +63,15 @@
     .vote-item:last-child {
         border-bottom: none;
     }
-    .login-modal {
-        display: none;
-        position: fixed;
-        z-index: 2000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.7);
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
     <div class="glass p-6 mb-6">
-        <div class="flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">管理</h1>
-                <p class="text-gray-600">管理配置、Cookie、运行状态等</p>
-            </div>
-            <button onclick="showLoginModal()" 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                登录
-            </button>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">管理</h1>
+            <p class="text-gray-600">管理配置、Cookie、运行状态等</p>
         </div>
     </div>
 
@@ -216,34 +200,6 @@
     </div>
 </div>
 
-<!-- 登录模态框 -->
-<div id="loginModal" class="modal login-modal">
-    <div class="modal-content">
-        <h3 class="text-lg font-bold mb-4">登录管理页面</h3>
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
-                <input type="text" id="login-username" value="admin"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
-                <input type="password" id="login-password" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="请输入密码"
-                    required>
-            </div>
-            <div class="flex justify-end">
-                <button type="submit" 
-                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-                    登录
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!-- 编辑Cookie模态框 -->
 <div id="editCookieModal" class="modal">
     <div class="modal-content">
@@ -294,41 +250,13 @@
 <script>
     // 编辑Cookie相关变量
     let currentEditIndex = -1;
-    // 存储认证信息
-    let authUsername = '';
-    let authPassword = '';
-
-    // 显示登录模态框（手动触发）
-    function showLoginModal() {
-        document.getElementById('loginModal').style.display = 'block';
-    }
     
-    // 页面加载时检查是否需要登录
+    // 页面加载时初始化
     window.addEventListener('DOMContentLoaded', async () => {
-        // 尝试从sessionStorage获取认证信息
-        authUsername = sessionStorage.getItem('crawler_admin_username') || 'admin';
-        authPassword = sessionStorage.getItem('crawler_admin_password') || '';
-        
-        // 如果没有密码，不自动显示登录模态框，让用户手动点击登录按钮
-        if (!authPassword) {
-            return;
-        }
-
-        // 测试认证是否有效
-        try {
-            await authFetch('/api/admin/crawler/status');
-            // 认证成功，继续加载
-        } catch (error) {
-            // 认证失败，清除存储的密码，但不显示登录模态框
-            sessionStorage.removeItem('crawler_admin_password');
-            authPassword = '';
-            return;
-        }
-
         // 并行加载配置、状态和Cookie列表（提高加载速度）
         await Promise.all([
             loadConfig(),
-            refreshStatus(),  // status接口已经包含投票统计，不需要单独调用
+            refreshStatus(),
             loadCookies()
         ]);
         
@@ -345,79 +273,11 @@
             window.refreshIntervalsSet = true;
         }
     });
-    
-    // 处理登录
-    async function handleLogin(event) {
-        event.preventDefault();
-        
-        const username = document.getElementById('login-username').value;
-        const password = document.getElementById('login-password').value;
-        
-        if (!username || !password) {
-            alert('请填写用户名和密码');
-            return;
-        }
-        
-        // 保存认证信息
-        authUsername = username;
-        authPassword = password;
-        sessionStorage.setItem('crawler_admin_username', username);
-        sessionStorage.setItem('crawler_admin_password', password);
-        
-        // 测试认证
-        try {
-            await authFetch('/api/admin/crawler/status');
-            // 认证成功，隐藏登录模态框
-            document.getElementById('loginModal').style.display = 'none';
-            
-            // 并行加载配置、状态和Cookie列表（提高加载速度）
-            await Promise.all([
-                loadConfig(),
-                refreshStatus(),
-                loadCookies()
-            ]);
-            
-            // 延迟加载日志（非关键数据，可以稍后加载）
-            setTimeout(() => {
-                refreshLogs();
-            }, 500);
-            
-            // 定时刷新状态和日志（避免重复设置）
-            if (!window.refreshIntervalsSet) {
-                setInterval(refreshStatus, 10000); // 每10秒刷新状态
-                setInterval(loadCookies, 30000); // 每30秒刷新Cookie列表
-                setInterval(refreshLogs, 30000); // 每30秒刷新日志
-                window.refreshIntervalsSet = true;
-            }
-        } catch (error) {
-            alert('用户名或密码错误，请重试');
-            document.getElementById('login-password').value = '';
-        }
-    }
-
-    // 创建带认证的fetch请求
-    function authFetch(url, options = {}) {
-        const headers = new Headers(options.headers || {});
-        headers.set('Authorization', 'Basic ' + btoa(authUsername + ':' + authPassword));
-        
-        return fetch(url, {
-            ...options,
-            headers: headers
-        }).then(async response => {
-            if (response.status === 401) {
-                // 认证失败，清除存储的密码
-                sessionStorage.removeItem('crawler_admin_password');
-                alert('密码错误，请刷新页面重新输入');
-                throw new Error('认证失败');
-            }
-            return response;
-        });
-    }
 
     // 加载配置
     async function loadConfig() {
         try {
-            const response = await authFetch('/api/admin/crawler/config');
+            const response = await fetch('/api/admin/crawler/config');
             const data = await response.json();
             
             if (data.success) {
@@ -437,7 +297,7 @@
     // 加载Cookie列表
     async function loadCookies() {
         try {
-            const response = await authFetch('/api/admin/crawler/cookies');
+            const response = await fetch('/api/admin/crawler/cookies');
             const data = await response.json();
             
             if (data.success) {
@@ -507,7 +367,7 @@
             formData.append('name', name);
             formData.append('cookie', cookie);
             
-            const response = await authFetch('/api/admin/crawler/cookies', {
+            const response = await fetch('/api/admin/crawler/cookies', {
                 method: 'POST',
                 body: formData
             });
@@ -556,10 +416,8 @@
     
     // 点击模态框外部关闭
     window.onclick = function(event) {
-        const loginModal = document.getElementById('loginModal');
         const editModal = document.getElementById('editCookieModal');
         const voteModal = document.getElementById('voteDetailModal');
-        // 登录模态框不允许点击外部关闭
         if (event.target == editModal) {
             closeEditModal();
         }
@@ -575,7 +433,7 @@
             formData.append('name', name);
             formData.append('cookie', cookie);
             
-            const response = await authFetch(`/api/admin/crawler/cookies/${index}`, {
+            const response = await fetch(`/api/admin/crawler/cookies/${index}`, {
                 method: 'PUT',
                 body: formData
             });
@@ -598,7 +456,7 @@
         if (!confirm(`确定要删除Cookie "${name}" 吗？\n注意：删除后对应的投票日志也会被删除。`)) return;
         
         try {
-            const response = await authFetch(`/api/admin/crawler/cookies/${index}`, {
+            const response = await fetch(`/api/admin/crawler/cookies/${index}`, {
                 method: 'DELETE'
             });
             
@@ -618,7 +476,7 @@
     // 显示今日投票详情
     async function showTodayVotes(cookieId, cookieName) {
         try {
-            const response = await authFetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=1`);
+            const response = await fetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=1`);
             const result = await response.json();
             
             if (result.success) {
@@ -655,7 +513,7 @@
     // 显示历史投票日志
     async function showVoteLogs(cookieId, cookieName) {
         try {
-            const response = await authFetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=30`);
+            const response = await fetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=30`);
             const result = await response.json();
             
             if (result.success) {
@@ -715,14 +573,13 @@
         const maxVotes = parseInt(document.getElementById('max-votes').value);
 
         const formData = new FormData();
-        formData.append('cookies', '');  // Cookie通过专门的接口管理，这里传空字符串
         formData.append('schedule_enabled', scheduleEnabled);
         formData.append('start_hour', startHour);
         formData.append('end_hour', endHour);
         formData.append('max_votes_per_day', maxVotes);
 
         try {
-            const response = await authFetch('/api/admin/crawler/config', {
+            const response = await fetch('/api/admin/crawler/config', {
                 method: 'POST',
                 body: formData
             });
@@ -743,7 +600,7 @@
     // 刷新状态
     async function refreshStatus() {
         try {
-            const response = await authFetch('/api/admin/crawler/status');
+            const response = await fetch('/api/admin/crawler/status');
             const data = await response.json();
             
             if (data.success) {
@@ -774,7 +631,7 @@
         if (!confirm('确定要启动吗？')) return;
         
         try {
-            const response = await authFetch('/api/admin/crawler/start', {
+            const response = await fetch('/api/admin/crawler/start', {
                 method: 'POST'
             });
             
@@ -796,7 +653,7 @@
         if (!confirm('确定要停止吗？')) return;
         
         try {
-            const response = await authFetch('/api/admin/crawler/stop', {
+            const response = await fetch('/api/admin/crawler/stop', {
                 method: 'POST'
             });
             
@@ -816,7 +673,7 @@
     // 刷新日志
     async function refreshLogs() {
         try {
-            const response = await authFetch('/api/admin/crawler/logs?lines=100');
+            const response = await fetch('/api/admin/crawler/logs?lines=100');
             const result = await response.json();
             
             if (result.success) {
@@ -841,7 +698,7 @@
         if (!confirm('确定要清空日志吗？')) return;
         
         try {
-            const response = await authFetch('/api/admin/crawler/logs/clear', {
+            const response = await fetch('/api/admin/crawler/logs/clear', {
                 method: 'POST'
             });
             
