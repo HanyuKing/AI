@@ -1,0 +1,843 @@
+{% extends "base.html" %}
+
+{% block title %}爬虫管理{% endblock %}
+
+{% block head %}
+<style>
+    .status-running {
+        color: #10B981;
+    }
+    .status-stopped {
+        color: #EF4444;
+    }
+    .log-container {
+        background: #1F2937;
+        color: #F3F4F6;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .log-line {
+        padding: 2px 8px;
+        border-bottom: 1px solid #374151;
+    }
+    .log-line:hover {
+        background: #374151;
+    }
+    .cookie-preview {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.75rem;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+    }
+    .vote-list {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 10px;
+    }
+    .vote-item {
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 0.875rem;
+    }
+    .vote-item:last-child {
+        border-bottom: none;
+    }
+    .login-modal {
+        display: block;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.7);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="glass p-6 mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">爬虫管理</h1>
+        <p class="text-gray-600">管理爬虫配置、Cookie、运行状态等</p>
+    </div>
+
+    <!-- 运行状态卡片 -->
+    <div class="glass p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">运行状态</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="text-sm text-gray-600">运行状态</div>
+                <div id="status-indicator" class="text-2xl font-bold mt-1">
+                    <span class="status-stopped">●</span> 检查中...
+                </div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="text-sm text-gray-600">进程ID</div>
+                <div id="pid-display" class="text-xl font-semibold mt-1">-</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="text-sm text-gray-600">今日总投票</div>
+                <div id="total-votes" class="text-xl font-semibold mt-1">-</div>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="startCrawler()" 
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                启动爬虫
+            </button>
+            <button onclick="stopCrawler()" 
+                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                停止爬虫
+            </button>
+            <button onclick="refreshStatus()" 
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                刷新状态
+            </button>
+        </div>
+    </div>
+
+    <!-- Cookie管理 -->
+    <div class="glass p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-900">Cookie管理</h2>
+            <button onclick="showAddCookieModal()" 
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                + 添加Cookie
+            </button>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-300 px-4 py-2 text-left">名称</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left">Cookie预览</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center">今日投票</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="cookies-table-body">
+                    <tr>
+                        <td colspan="4" class="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                            加载中...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 配置管理 -->
+    <div class="glass p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">定时任务配置</h2>
+        <form id="config-form" onsubmit="saveConfig(event)">
+            <div class="space-y-4">
+                <!-- 定时任务配置 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="schedule-enabled" class="mr-2" checked>
+                            <span class="text-sm font-medium text-gray-700">启用定时任务</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
+                        <input type="number" id="start-hour" min="0" max="23" value="7"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
+                        <input type="number" id="end-hour" min="0" max="23" value="9"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">每日投票限制</label>
+                        <input type="number" id="max-votes" min="1" max="100" value="10"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <button type="submit" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                    保存配置
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 日志查看 -->
+    <div class="glass p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-900">运行日志</h2>
+            <div class="flex gap-2">
+                <button onclick="refreshLogs()" 
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+                    刷新日志
+                </button>
+                <button onclick="clearLogs()" 
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+                    清空日志
+                </button>
+            </div>
+        </div>
+        <div id="log-container" class="log-container rounded-lg p-4">
+            <div class="text-gray-400">加载日志中...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 登录模态框 -->
+<div id="loginModal" class="modal login-modal">
+    <div class="modal-content">
+        <h3 class="text-lg font-bold mb-4">登录管理页面</h3>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+                <input type="text" id="login-username" value="admin"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                <input type="password" id="login-password" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="默认密码：admin123"
+                    required>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" 
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                    登录
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 编辑Cookie模态框 -->
+<div id="editCookieModal" class="modal">
+    <div class="modal-content">
+        <h3 class="text-lg font-bold mb-4">编辑Cookie</h3>
+        <form id="editCookieForm" onsubmit="handleEditCookieSubmit(event)">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Cookie名称</label>
+                <input type="text" id="edit-cookie-name" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Cookie值</label>
+                <textarea id="edit-cookie-value" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="4" required></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeEditModal()" 
+                    class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
+                    取消
+                </button>
+                <button type="submit" 
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                    保存
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 投票详情模态框 -->
+<div id="voteDetailModal" class="modal">
+    <div class="modal-content">
+        <h3 class="text-lg font-bold mb-4" id="voteDetailTitle">投票详情</h3>
+        <div id="voteDetailContent" class="vote-list">
+            <div class="text-gray-500 text-center py-4">加载中...</div>
+        </div>
+        <div class="flex justify-end mt-4">
+            <button onclick="closeVoteDetailModal()" 
+                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
+                关闭
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 编辑Cookie相关变量
+    let currentEditIndex = -1;
+    // 存储认证信息
+    let authUsername = '';
+    let authPassword = '';
+
+    // 页面加载时检查是否需要登录
+    window.addEventListener('DOMContentLoaded', async () => {
+        // 尝试从sessionStorage获取认证信息
+        authUsername = sessionStorage.getItem('crawler_admin_username') || 'admin';
+        authPassword = sessionStorage.getItem('crawler_admin_password') || '';
+        
+        if (!authPassword) {
+            // 如果没有密码，显示登录模态框
+            document.getElementById('loginModal').style.display = 'block';
+            return;
+        }
+
+        // 测试认证是否有效
+        try {
+            await authFetch('/api/admin/crawler/status');
+            // 认证成功，隐藏登录模态框
+            document.getElementById('loginModal').style.display = 'none';
+        } catch (error) {
+            // 认证失败，清除存储的密码，显示登录模态框
+            sessionStorage.removeItem('crawler_admin_password');
+            document.getElementById('loginModal').style.display = 'block';
+            return;
+        }
+
+        // 加载配置和状态
+        await loadConfig();
+        await loadCookies();
+        await refreshStatus();
+        await refreshLogs();
+        
+        // 定时刷新状态和日志
+        setInterval(refreshStatus, 10000); // 每10秒刷新状态
+        setInterval(loadCookies, 30000); // 每30秒刷新Cookie列表
+        setInterval(refreshLogs, 30000); // 每30秒刷新日志
+    });
+    
+    // 处理登录
+    async function handleLogin(event) {
+        event.preventDefault();
+        
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        
+        if (!username || !password) {
+            alert('请填写用户名和密码');
+            return;
+        }
+        
+        // 保存认证信息
+        authUsername = username;
+        authPassword = password;
+        sessionStorage.setItem('crawler_admin_username', username);
+        sessionStorage.setItem('crawler_admin_password', password);
+        
+        // 测试认证
+        try {
+            await authFetch('/api/admin/crawler/status');
+            // 认证成功，隐藏登录模态框
+            document.getElementById('loginModal').style.display = 'none';
+            
+            // 加载配置和状态
+            await loadConfig();
+            await loadCookies();
+            await refreshStatus();
+            await refreshLogs();
+            
+            // 定时刷新状态和日志
+            setInterval(refreshStatus, 10000); // 每10秒刷新状态
+            setInterval(loadCookies, 30000); // 每30秒刷新Cookie列表
+            setInterval(refreshLogs, 30000); // 每30秒刷新日志
+        } catch (error) {
+            alert('用户名或密码错误，请重试');
+            document.getElementById('login-password').value = '';
+        }
+    }
+
+    // 创建带认证的fetch请求
+    function authFetch(url, options = {}) {
+        const headers = new Headers(options.headers || {});
+        headers.set('Authorization', 'Basic ' + btoa(authUsername + ':' + authPassword));
+        
+        return fetch(url, {
+            ...options,
+            headers: headers
+        }).then(async response => {
+            if (response.status === 401) {
+                // 认证失败，清除存储的密码
+                sessionStorage.removeItem('crawler_admin_password');
+                alert('密码错误，请刷新页面重新输入');
+                throw new Error('认证失败');
+            }
+            return response;
+        });
+    }
+
+    // 加载配置
+    async function loadConfig() {
+        try {
+            const response = await authFetch('/api/admin/crawler/config');
+            const data = await response.json();
+            
+            if (data.success) {
+                const config = data.data;
+                
+                // 填充表单
+                document.getElementById('schedule-enabled').checked = config.schedule?.enabled ?? true;
+                document.getElementById('start-hour').value = config.schedule?.start_hour ?? 7;
+                document.getElementById('end-hour').value = config.schedule?.end_hour ?? 9;
+                document.getElementById('max-votes').value = config.max_votes_per_day ?? 10;
+            }
+        } catch (error) {
+            console.error('加载配置失败:', error);
+        }
+    }
+
+    // 加载Cookie列表
+    async function loadCookies() {
+        try {
+            const response = await authFetch('/api/admin/crawler/cookies');
+            const data = await response.json();
+            
+            if (data.success) {
+                const cookies = data.data;
+                const tbody = document.getElementById('cookies-table-body');
+                
+                if (cookies.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="border border-gray-300 px-4 py-8 text-center text-gray-500">暂无Cookie，点击"添加Cookie"按钮添加</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = cookies.map((cookie, index) => {
+                    // Cookie预览（只显示前30字符）
+                    const cookiePreview = cookie.cookie.length > 30 ? cookie.cookie.substring(0, 30) + '...' : cookie.cookie;
+                    // 获取今日投票详情
+                    const todayLogs = (cookie.vote_logs || []).filter(log => {
+                        const today = new Date().toISOString().split('T')[0];
+                        return log.date === today;
+                    });
+                    
+                    return `
+                        <tr class="hover:bg-gray-50">
+                            <td class="border border-gray-300 px-4 py-2">${escapeHtml(cookie.name)}</td>
+                            <td class="border border-gray-300 px-4 py-2">
+                                <div class="cookie-preview font-mono" title="${escapeHtml(cookie.cookie)}">
+                                    ${escapeHtml(cookiePreview)}
+                                </div>
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <div>
+                                    <span class="font-semibold">${cookie.today_votes || 0}</span>
+                                    ${todayLogs.length > 0 ? `
+                                        <button onclick="showTodayVotes('${cookie.id}', '${escapeHtml(cookie.name)}')" 
+                                            class="ml-2 text-blue-600 hover:text-blue-800 text-xs">查看详情</button>
+                                    ` : ''}
+                                </div>
+                                <button onclick="showVoteLogs('${cookie.id}', '${escapeHtml(cookie.name)}')" 
+                                    class="mt-1 text-gray-600 hover:text-gray-800 text-xs">历史日志</button>
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <button onclick="editCookie(${index}, '${escapeHtml(cookie.name)}', '${escapeHtml(cookie.cookie.replace(/'/g, "\\'"))}')" 
+                                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm mr-2">编辑</button>
+                                <button onclick="deleteCookie(${index}, '${escapeHtml(cookie.name)}')" 
+                                    class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        } catch (error) {
+            console.error('加载Cookie列表失败:', error);
+        }
+    }
+
+    // 显示添加Cookie模态框
+    function showAddCookieModal() {
+        const name = prompt('请输入Cookie名称:');
+        if (!name) return;
+        
+        const cookie = prompt('请输入Cookie内容:');
+        if (!cookie) return;
+        
+        addCookie(name, cookie);
+    }
+
+    // 添加Cookie
+    async function addCookie(name, cookie) {
+        try {
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('cookie', cookie);
+            
+            const response = await authFetch('/api/admin/crawler/cookies', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Cookie添加成功！');
+                await loadCookies();
+            } else {
+                alert('添加失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('添加失败: ' + error.message);
+        }
+    }
+
+    // 编辑Cookie
+    function editCookie(index, currentName, currentCookie) {
+        currentEditIndex = index;
+        document.getElementById('edit-cookie-name').value = currentName;
+        document.getElementById('edit-cookie-value').value = currentCookie;
+        document.getElementById('editCookieModal').style.display = 'block';
+    }
+    
+    // 关闭编辑模态框
+    function closeEditModal() {
+        document.getElementById('editCookieModal').style.display = 'none';
+        currentEditIndex = -1;
+    }
+    
+    // 处理编辑表单提交
+    function handleEditCookieSubmit(event) {
+        event.preventDefault();
+        const name = document.getElementById('edit-cookie-name').value;
+        const cookie = document.getElementById('edit-cookie-value').value;
+        
+        if (!name || !cookie) {
+            alert('请填写完整信息');
+            return;
+        }
+        
+        updateCookie(currentEditIndex, name, cookie);
+        closeEditModal();
+    }
+    
+    // 点击模态框外部关闭
+    window.onclick = function(event) {
+        const loginModal = document.getElementById('loginModal');
+        const editModal = document.getElementById('editCookieModal');
+        const voteModal = document.getElementById('voteDetailModal');
+        // 登录模态框不允许点击外部关闭
+        if (event.target == editModal) {
+            closeEditModal();
+        }
+        if (event.target == voteModal) {
+            closeVoteDetailModal();
+        }
+    }
+
+    // 更新Cookie
+    async function updateCookie(index, name, cookie) {
+        try {
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('cookie', cookie);
+            
+            const response = await authFetch(`/api/admin/crawler/cookies/${index}`, {
+                method: 'PUT',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Cookie更新成功！');
+                await loadCookies();
+            } else {
+                alert('更新失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('更新失败: ' + error.message);
+        }
+    }
+
+    // 删除Cookie
+    async function deleteCookie(index, name) {
+        if (!confirm(`确定要删除Cookie "${name}" 吗？\n注意：删除后对应的投票日志也会被删除。`)) return;
+        
+        try {
+            const response = await authFetch(`/api/admin/crawler/cookies/${index}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Cookie删除成功！');
+                await loadCookies();
+            } else {
+                alert('删除失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('删除失败: ' + error.message);
+        }
+    }
+
+    // 显示今日投票详情
+    async function showTodayVotes(cookieId, cookieName) {
+        try {
+            const response = await authFetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=1`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const logs = result.logs || [];
+                const today = new Date().toISOString().split('T')[0];
+                const todayLog = logs.find(log => log.date === today) || { logs: [] };
+                
+                document.getElementById('voteDetailTitle').textContent = `${cookieName} - 今日投票详情`;
+                const content = document.getElementById('voteDetailContent');
+                
+                if (todayLog.logs && todayLog.logs.length > 0) {
+                    content.innerHTML = `
+                        <div class="mb-2 text-sm text-gray-600">共 ${todayLog.logs.length} 次投票</div>
+                        ${todayLog.logs.map(log => `
+                            <div class="vote-item">
+                                <div class="font-medium">${log.timestamp}</div>
+                                <div class="text-gray-600 text-xs mt-1">wantItId: ${log.want_it_id}</div>
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    content.innerHTML = '<div class="text-gray-500 text-center py-4">今日暂无投票记录</div>';
+                }
+                
+                document.getElementById('voteDetailModal').style.display = 'block';
+            } else {
+                alert('获取投票详情失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('获取投票详情失败: ' + error.message);
+        }
+    }
+    
+    // 显示历史投票日志
+    async function showVoteLogs(cookieId, cookieName) {
+        try {
+            const response = await authFetch(`/api/admin/crawler/cookies/${cookieId}/logs?days=30`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const logs = result.logs || [];
+                
+                document.getElementById('voteDetailTitle').textContent = `${cookieName} - 历史投票日志（最近30天）`;
+                const content = document.getElementById('voteDetailContent');
+                
+                if (logs.length > 0) {
+                    let html = '';
+                    logs.forEach(dayLog => {
+                        if (dayLog.count > 0) {
+                            html += `
+                                <div class="mb-4 pb-4 border-b border-gray-200">
+                                    <div class="font-semibold text-gray-800 mb-2">${dayLog.date} - ${dayLog.count} 次投票</div>
+                                    ${dayLog.logs && dayLog.logs.length > 0 ? dayLog.logs.map(log => `
+                                        <div class="vote-item">
+                                            <div class="font-medium">${log.timestamp}</div>
+                                            <div class="text-gray-600 text-xs mt-1">wantItId: ${log.want_it_id}</div>
+                                        </div>
+                                    `).join('') : ''}
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    if (html === '') {
+                        html = '<div class="text-gray-500 text-center py-4">暂无投票记录</div>';
+                    }
+                    
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<div class="text-gray-500 text-center py-4">暂无投票记录</div>';
+                }
+                
+                document.getElementById('voteDetailModal').style.display = 'block';
+            } else {
+                alert('获取日志失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('获取日志失败: ' + error.message);
+        }
+    }
+    
+    // 关闭投票详情模态框
+    function closeVoteDetailModal() {
+        document.getElementById('voteDetailModal').style.display = 'none';
+    }
+
+    // 保存配置
+    async function saveConfig(event) {
+        event.preventDefault();
+        
+        const scheduleEnabled = document.getElementById('schedule-enabled').checked;
+        const startHour = parseInt(document.getElementById('start-hour').value);
+        const endHour = parseInt(document.getElementById('end-hour').value);
+        const maxVotes = parseInt(document.getElementById('max-votes').value);
+
+        const formData = new FormData();
+        formData.append('cookies', '');  // Cookie通过专门的接口管理，这里传空字符串
+        formData.append('schedule_enabled', scheduleEnabled);
+        formData.append('start_hour', startHour);
+        formData.append('end_hour', endHour);
+        formData.append('max_votes_per_day', maxVotes);
+
+        try {
+            const response = await authFetch('/api/admin/crawler/config', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('配置保存成功！');
+                await refreshStatus();
+            } else {
+                alert('保存失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('保存失败: ' + error.message);
+        }
+    }
+
+    // 刷新状态
+    async function refreshStatus() {
+        try {
+            const response = await authFetch('/api/admin/crawler/status');
+            const data = await response.json();
+            
+            if (data.success) {
+                const status = data.data;
+                
+                // 更新状态指示器
+                const indicator = document.getElementById('status-indicator');
+                if (status.is_running) {
+                    indicator.innerHTML = '<span class="status-running">●</span> 运行中';
+                } else {
+                    indicator.innerHTML = '<span class="status-stopped">●</span> 已停止';
+                }
+                
+                // 更新PID
+                document.getElementById('pid-display').textContent = status.pid || '-';
+                
+                // 更新投票统计
+                const voteStats = status.vote_stats || {};
+                document.getElementById('total-votes').textContent = voteStats.total_today_votes || 0;
+            }
+        } catch (error) {
+            console.error('刷新状态失败:', error);
+        }
+    }
+
+    // 启动爬虫
+    async function startCrawler() {
+        if (!confirm('确定要启动爬虫吗？')) return;
+        
+        try {
+            const response = await authFetch('/api/admin/crawler/start', {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('爬虫启动成功！');
+                setTimeout(refreshStatus, 1000);
+            } else {
+                alert('启动失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('启动失败: ' + error.message);
+        }
+    }
+
+    // 停止爬虫
+    async function stopCrawler() {
+        if (!confirm('确定要停止爬虫吗？')) return;
+        
+        try {
+            const response = await authFetch('/api/admin/crawler/stop', {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('爬虫已停止！');
+                setTimeout(refreshStatus, 1000);
+            } else {
+                alert('停止失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('停止失败: ' + error.message);
+        }
+    }
+
+    // 刷新日志
+    async function refreshLogs() {
+        try {
+            const response = await authFetch('/api/admin/crawler/logs?lines=100');
+            const result = await response.json();
+            
+            if (result.success) {
+                const container = document.getElementById('log-container');
+                if (result.lines && result.lines.length > 0) {
+                    container.innerHTML = result.lines.map(line => 
+                        `<div class="log-line">${escapeHtml(line)}</div>`
+                    ).join('');
+                    // 滚动到底部
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    container.innerHTML = '<div class="text-gray-400">暂无日志</div>';
+                }
+            }
+        } catch (error) {
+            console.error('刷新日志失败:', error);
+        }
+    }
+
+    // 清空日志
+    async function clearLogs() {
+        if (!confirm('确定要清空日志吗？')) return;
+        
+        try {
+            const response = await authFetch('/api/admin/crawler/logs/clear', {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('日志已清空！');
+                await refreshLogs();
+            } else {
+                alert('清空失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('清空失败: ' + error.message);
+        }
+    }
+
+    // HTML转义
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}
+

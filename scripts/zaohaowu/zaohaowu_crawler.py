@@ -153,8 +153,13 @@ class ZaoHaoWuCrawler:
                     pass
             return 0
     
-    def _increment_vote_count(self) -> bool:
-        """增加投票计数，返回是否成功（未超过限制）"""
+    def _increment_vote_count(self, want_it_id: str = "") -> bool:
+        """
+        增加投票计数，返回是否成功（未超过限制）
+        
+        Args:
+            want_it_id: 投票的wantItId（用于记录日志）
+        """
         vote_file = self._get_vote_count_file()
         current_count = self._get_today_vote_count()
         
@@ -163,11 +168,36 @@ class ZaoHaoWuCrawler:
         
         with _vote_count_lock:
             try:
+                # 读取现有数据
+                data = {
+                    "date": self.today,
+                    "count": current_count + 1,
+                    "logs": []
+                }
+                
+                if vote_file.exists():
+                    try:
+                        with open(vote_file, 'r', encoding='utf-8') as f:
+                            existing_data = json.load(f)
+                            # 如果日期相同，保留现有日志
+                            if existing_data.get("date") == self.today:
+                                data["logs"] = existing_data.get("logs", [])
+                            # 如果日期不同，清空日志（新的一天）
+                    except Exception:
+                        pass
+                
+                # 添加新的投票日志
+                log_entry = {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "want_it_id": want_it_id,
+                    "date": self.today
+                }
+                data["logs"].append(log_entry)
+                
+                # 保存数据
                 with open(vote_file, 'w', encoding='utf-8') as f:
-                    json.dump({
-                        "date": self.today,
-                        "count": current_count + 1
-                    }, f, indent=2)
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                
                 return True
             except Exception as e:
                 log_print(f"⚠️  保存投票计数失败: {e}")
@@ -556,7 +586,7 @@ class ZaoHaoWuCrawler:
             
             # 投票成功，增加计数
             if result.get("code") == 200 or result.get("success") is not False:
-                if self._increment_vote_count():
+                if self._increment_vote_count(want_it_id):
                     new_count = self._get_today_vote_count()
                     remaining = self.max_votes_per_day - new_count
                     thread_safe_print(f"{self.thread_prefix}   今日已投票: {new_count}/{self.max_votes_per_day}, 剩余: {remaining}")
@@ -770,15 +800,28 @@ def load_config_from_file(file_path: str = "cookies.json") -> Dict[str, Any]:
 def load_cookies_from_file(file_path: str = "cookies.json") -> List[str]:
     """
     从配置文件加载Cookie列表（兼容旧接口）
+    支持旧格式（字符串数组）和新格式（对象数组）
     
     Args:
         file_path: Cookie配置文件路径（相对于脚本目录）
         
     Returns:
-        Cookie列表
+        Cookie字符串列表
     """
     config = load_config_from_file(file_path)
-    return config.get("cookies", [])
+    cookies = config.get("cookies", [])
+    
+    # 转换为字符串列表（兼容新旧格式）
+    cookie_list = []
+    for item in cookies:
+        if isinstance(item, str):
+            # 旧格式：直接是字符串
+            cookie_list.append(item)
+        elif isinstance(item, dict):
+            # 新格式：对象，提取cookie字段
+            cookie_list.append(item.get("cookie", ""))
+    
+    return cookie_list
 
 
 def run_single_cookie(cookie: str, thread_id: int, limit: int = 40, want_it_ranking_type: int = 2, delay: float = 0.5, max_votes_per_day: int = 10) -> Dict[str, Any]:
@@ -937,10 +980,20 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
         return
     
     # 执行爬虫任务
-    def execute_crawler_tasks(cookies_list: List[str], max_votes: int):
+    def execute_crawler_tasks(cookies_list: List[Any], max_votes: int):
         """执行爬虫任务的内部函数"""
-        log_print(f"\n✓ 加载了 {len(cookies_list)} 个Cookie")
-        log_print(f"✓ 将使用 {len(cookies_list)} 个线程并发执行，互不影响")
+        # 转换为字符串列表（兼容新旧格式）
+        cookie_strings = []
+        for item in cookies_list:
+            if isinstance(item, str):
+                cookie_strings.append(item)
+            elif isinstance(item, dict):
+                cookie_strings.append(item.get("cookie", ""))
+        
+        cookie_strings = [c for c in cookie_strings if c]  # 过滤空字符串
+        
+        log_print(f"\n✓ 加载了 {len(cookie_strings)} 个Cookie")
+        log_print(f"✓ 将使用 {len(cookie_strings)} 个线程并发执行，互不影响")
         log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes} 次\n")
         
         # 配置参数
@@ -953,11 +1006,11 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
         all_results = []
         total_stats = {"total": 0, "success": 0, "fail": 0, "skipped": 0}
         
-        with ThreadPoolExecutor(max_workers=len(cookies_list)) as executor:
+        with ThreadPoolExecutor(max_workers=len(cookie_strings)) as executor:
             # 提交所有任务
             future_to_cookie = {
                 executor.submit(run_single_cookie, cookie, idx + 1, limit, want_it_ranking_type, delay, max_votes): (idx + 1, cookie)
-                for idx, cookie in enumerate(cookies_list)
+                for idx, cookie in enumerate(cookie_strings)
             }
             
             # 等待所有任务完成
@@ -981,7 +1034,7 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
         log_print("\n" + "=" * 60)
         log_print("所有线程执行完成 - 最终统计")
         log_print("=" * 60)
-        log_print(f"并发线程数: {len(cookies_list)}")
+        log_print(f"并发线程数: {len(cookie_strings)}")
         log_print(f"总计处理: {total_stats['total']} 个")
         log_print(f"成功: {total_stats['success']} 个")
         log_print(f"失败: {total_stats['fail']} 个")
