@@ -298,27 +298,30 @@
     let authUsername = '';
     let authPassword = '';
 
+    // 显示登录模态框（手动触发）
+    function showLoginModal() {
+        document.getElementById('loginModal').style.display = 'block';
+    }
+    
     // 页面加载时检查是否需要登录
     window.addEventListener('DOMContentLoaded', async () => {
         // 尝试从sessionStorage获取认证信息
         authUsername = sessionStorage.getItem('crawler_admin_username') || 'admin';
         authPassword = sessionStorage.getItem('crawler_admin_password') || '';
         
+        // 如果没有密码，不自动显示登录模态框，让用户手动点击登录按钮
         if (!authPassword) {
-            // 如果没有密码，显示登录模态框
-            document.getElementById('loginModal').style.display = 'block';
             return;
         }
 
         // 测试认证是否有效
         try {
             await authFetch('/api/admin/crawler/status');
-            // 认证成功，隐藏登录模态框
-            document.getElementById('loginModal').style.display = 'none';
+            // 认证成功，继续加载
         } catch (error) {
-            // 认证失败，清除存储的密码，显示登录模态框
+            // 认证失败，清除存储的密码，但不显示登录模态框
             sessionStorage.removeItem('crawler_admin_password');
-            document.getElementById('loginModal').style.display = 'block';
+            authPassword = '';
             return;
         }
 
@@ -328,10 +331,13 @@
         await refreshStatus();
         await refreshLogs();
         
-        // 定时刷新状态和日志
-        setInterval(refreshStatus, 10000); // 每10秒刷新状态
-        setInterval(loadCookies, 30000); // 每30秒刷新Cookie列表
-        setInterval(refreshLogs, 30000); // 每30秒刷新日志
+        // 定时刷新状态和日志（避免重复设置）
+        if (!window.refreshIntervalsSet) {
+            setInterval(refreshStatus, 10000); // 每10秒刷新状态
+            setInterval(loadCookies, 30000); // 每30秒刷新Cookie列表
+            setInterval(refreshLogs, 30000); // 每30秒刷新日志
+            window.refreshIntervalsSet = true;
+        }
     });
     
     // 处理登录
