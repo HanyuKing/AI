@@ -50,6 +50,19 @@
         width: 90%;
         max-width: 500px;
     }
+    .modal-content-wide {
+        margin: 5% auto;
+        width: 92%;
+        max-width: 1000px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+    }
+    #refreshLogModal .log-container {
+        max-height: none;
+        flex: 1;
+        height: 60vh;
+    }
     .vote-list {
         max-height: 300px;
         overflow-y: auto;
@@ -140,6 +153,49 @@
             <button onclick="refreshStatus()" 
                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
                 刷新状态
+            </button>
+        </div>
+    </div>
+
+    <!-- Cookie 刷新脚本 -->
+    <div class="glass p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Cookie 刷新脚本</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="text-sm text-gray-600">运行状态</div>
+                <div id="refresh-status-indicator" class="text-2xl font-bold mt-1">
+                    <span class="status-stopped">●</span> 检查中...
+                </div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="text-sm text-gray-600">进程ID</div>
+                <div id="refresh-pid-display" class="text-xl font-semibold mt-1">-</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="text-sm text-gray-600">刷新频率</div>
+                <div class="text-xl font-semibold mt-1">每 3 分钟</div>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="startRefreshScript()" 
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                启动
+            </button>
+            <button onclick="stopRefreshScript()" 
+                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                停止
+            </button>
+            <button onclick="restartRefreshScript()" 
+                class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                重启
+            </button>
+            <button onclick="refreshCookieScriptStatus()" 
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                刷新状态
+            </button>
+            <button onclick="showRefreshLogs()"
+                class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                查看日志
             </button>
         </div>
     </div>
@@ -281,6 +337,28 @@
     </div>
 </div>
 
+<!-- Cookie 刷新日志模态框 -->
+<div id="refreshLogModal" class="modal">
+    <div class="modal-content modal-content-wide">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="text-lg font-bold">Cookie 刷新日志</h3>
+            <button onclick="closeRefreshLogModal()"
+                class="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
+                关闭
+            </button>
+        </div>
+        <div class="flex gap-2 mb-3">
+            <button onclick="refreshRefreshLogs()"
+                class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
+                刷新
+            </button>
+        </div>
+        <div id="refresh-log-container" class="log-container rounded-lg p-4">
+            <div class="text-gray-400">加载日志中...</div>
+        </div>
+    </div>
+</div>
+
 <script>
     // 编辑Cookie相关变量
     let currentEditIndex = -1;
@@ -374,6 +452,7 @@
         await Promise.all([
             loadConfig(),
             refreshStatus(),
+            refreshCookieScriptStatus(),
             loadCookies()
         ]);
         
@@ -385,6 +464,7 @@
         // 定时刷新状态和日志（避免重复设置）
         if (!window.refreshIntervalsSet) {
             setInterval(refreshStatus, 10000); // 每10秒刷新状态
+            setInterval(refreshCookieScriptStatus, 10000); // 每10秒刷新刷新脚本状态
             setInterval(loadCookies, 30000); // 每30秒刷新Cookie列表
             setInterval(refreshLogs, 30000); // 每30秒刷新日志
             window.refreshIntervalsSet = true;
@@ -570,11 +650,15 @@
     window.onclick = function(event) {
         const editModal = document.getElementById('editCookieModal');
         const voteModal = document.getElementById('voteDetailModal');
+        const refreshModal = document.getElementById('refreshLogModal');
         if (event.target == editModal) {
             closeEditModal();
         }
         if (event.target == voteModal) {
             closeVoteDetailModal();
+        }
+        if (event.target == refreshModal) {
+            closeRefreshLogModal();
         }
     }
 
@@ -778,6 +862,27 @@
         }
     }
 
+    // 刷新 Cookie 刷新脚本状态
+    async function refreshCookieScriptStatus() {
+        try {
+            const response = await apiFetch('/api/admin/refresh/status');
+            const data = await response.json();
+
+            if (data.success) {
+                const status = data.data;
+                const indicator = document.getElementById('refresh-status-indicator');
+                if (status.is_running) {
+                    indicator.innerHTML = '<span class="status-running">●</span> 运行中';
+                } else {
+                    indicator.innerHTML = '<span class="status-stopped">●</span> 已停止';
+                }
+                document.getElementById('refresh-pid-display').textContent = status.pid || '-';
+            }
+        } catch (error) {
+            console.error('刷新脚本状态失败:', error);
+        }
+    }
+
     // 启动
     async function startCrawler() {
         if (!confirm('确定要启动吗？')) return;
@@ -844,6 +949,105 @@
         }
     }
 
+    // 启动 Cookie 刷新脚本
+    async function startRefreshScript() {
+        if (!confirm('确定要启动 Cookie 刷新脚本吗？')) return;
+
+        try {
+            const response = await apiFetch('/api/admin/refresh/start', {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                alert('启动成功！');
+                setTimeout(refreshCookieScriptStatus, 1000);
+            } else {
+                alert('启动失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('启动失败: ' + error.message);
+        }
+    }
+
+    // 停止 Cookie 刷新脚本
+    async function stopRefreshScript() {
+        if (!confirm('确定要停止 Cookie 刷新脚本吗？')) return;
+
+        try {
+            const response = await apiFetch('/api/admin/refresh/stop', {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                alert('已停止！');
+                setTimeout(refreshCookieScriptStatus, 1000);
+            } else {
+                alert('停止失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('停止失败: ' + error.message);
+        }
+    }
+
+    // 重启 Cookie 刷新脚本
+    async function restartRefreshScript() {
+        if (!confirm('确定要重启 Cookie 刷新脚本吗？')) return;
+
+        try {
+            const response = await apiFetch('/api/admin/refresh/restart', {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                alert('重启成功！');
+                setTimeout(refreshCookieScriptStatus, 2000);
+            } else {
+                alert('重启失败: ' + (result.error || '未知错误'));
+            }
+        } catch (error) {
+            alert('重启失败: ' + error.message);
+        }
+    }
+
+    // 打开 Cookie 刷新日志
+    async function showRefreshLogs() {
+        document.getElementById('refreshLogModal').style.display = 'block';
+        await refreshRefreshLogs();
+    }
+
+    // 关闭 Cookie 刷新日志
+    function closeRefreshLogModal() {
+        document.getElementById('refreshLogModal').style.display = 'none';
+    }
+
+    // 刷新 Cookie 刷新日志
+    async function refreshRefreshLogs() {
+        try {
+            const response = await apiFetch('/api/admin/refresh/logs?lines=200');
+            const result = await response.json();
+
+            const container = document.getElementById('refresh-log-container');
+            if (result.success) {
+                if (result.lines && result.lines.length > 0) {
+                    container.innerHTML = result.lines.map(line =>
+                        `<div class="log-line">${escapeHtml(line)}</div>`
+                    ).join('');
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    container.innerHTML = '<div class="text-gray-400">暂无日志</div>';
+                }
+            } else {
+                container.innerHTML = `<div class="text-gray-400">加载失败: ${escapeHtml(result.error || '未知错误')}</div>`;
+            }
+        } catch (error) {
+            const container = document.getElementById('refresh-log-container');
+            container.innerHTML = `<div class="text-gray-400">加载失败: ${escapeHtml(error.message)}</div>`;
+        }
+    }
+
     // 刷新日志
     async function refreshLogs() {
         try {
@@ -897,4 +1101,3 @@
     }
 </script>
 {% endblock %}
-

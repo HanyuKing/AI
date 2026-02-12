@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from typing import Optional
 
 from server.services.crawler_admin_service import crawler_admin_service
+from server.services.refresh_cookie_service import refresh_cookie_service
 
 router = APIRouter()
 
@@ -153,6 +154,41 @@ async def restart_crawler(token: str = Depends(require_login)):
     return result
 
 
+@router.get("/api/admin/refresh/status")
+async def get_refresh_status(token: str = Depends(require_login)):
+    """获取 Cookie 刷新脚本状态"""
+    status = refresh_cookie_service.get_status()
+    return {"success": True, "data": status}
+
+
+@router.post("/api/admin/refresh/start")
+async def start_refresh_script(token: str = Depends(require_login)):
+    """启动 Cookie 刷新脚本"""
+    result = refresh_cookie_service.start()
+    return result
+
+
+@router.post("/api/admin/refresh/stop")
+async def stop_refresh_script(token: str = Depends(require_login)):
+    """停止 Cookie 刷新脚本"""
+    result = refresh_cookie_service.stop()
+    return result
+
+
+@router.post("/api/admin/refresh/restart")
+async def restart_refresh_script(token: str = Depends(require_login)):
+    """重启 Cookie 刷新脚本"""
+    result = refresh_cookie_service.restart()
+    return result
+
+
+@router.get("/api/admin/refresh/logs")
+async def get_refresh_logs(lines: int = 200, token: str = Depends(require_login)):
+    """获取 Cookie 刷新脚本日志"""
+    result = refresh_cookie_service.get_logs(lines)
+    return result
+
+
 @router.get("/api/admin/crawler/logs")
 async def get_logs(lines: int = 100, token: str = Depends(require_login)):
     """获取日志"""
@@ -200,4 +236,3 @@ async def get_cookie_vote_logs(cookie_id: str, days: int = 7, token: str = Depen
     """获取指定Cookie的投票日志"""
     result = crawler_admin_service.get_cookie_vote_logs(cookie_id, days)
     return result
-
