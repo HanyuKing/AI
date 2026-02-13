@@ -388,8 +388,7 @@ class ZaoHaoWuCrawler:
             response.raise_for_status()
             result = response.json()
             
-            # 从响应头中提取并更新Cookie
-            self._update_cookie_from_response(response)
+            # 不从响应头更新Cookie（保持配置文件不变）
             
             # 检查是否需要切换Cookie
             if result.get("code") == 401:
@@ -400,8 +399,7 @@ class ZaoHaoWuCrawler:
                 response = self.client.get(url, params=params, headers=self.headers)
                 response.raise_for_status()
                 result = response.json()
-                # 再次尝试更新Cookie
-                self._update_cookie_from_response(response)
+                # 不从响应头更新Cookie（保持配置文件不变）
             
             thread_safe_print(f"{self.thread_prefix} ✓ 用户信息接口调用成功")
             return result
@@ -1152,4 +1150,3 @@ if __name__ == "__main__":
     # main(schedule_mode=False)  # 立即执行，忽略配置文件
     # main(start_hour=8, end_hour=10)  # 覆盖运行时间范围
     main()
-
