@@ -635,7 +635,7 @@ class ZaoHaoWuCrawler:
         
         # 步骤3: 获取排行榜数据（获取2页，防作弊）
         thread_safe_print(f"{self.thread_prefix} \n[步骤 3] 获取排行榜数据（获取2页）...")
-        ranking_data = self.get_ranking_want_multi_pages(pages=2, limit=limit, want_it_ranking_type=want_it_ranking_type)
+        ranking_data = self.get_ranking_want_multi_pages(pages=10, limit=limit, want_it_ranking_type=want_it_ranking_type)
         
         if not ranking_data:
             thread_safe_print(f"{self.thread_prefix} ✗ 未获取到排行榜数据，退出")
