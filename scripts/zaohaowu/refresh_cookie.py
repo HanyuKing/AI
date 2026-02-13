@@ -5,7 +5,7 @@ import time
 import signal
 import requests
 
-BASE_URL = os.getenv("UC_BASE_URL", "https://ecommerce.zaohaowu.com")
+BASE_URL = os.getenv("UC_BASE_URL", "https://zaohaowu.com")
 # fetchToken GET 接口路径（无参数，带 cookie）
 FETCH_PATH = os.getenv("UC_FETCH_PATH", "/aigc/api/auth/fetchToken")
 # refreshToken GET 接口路径（原 renewalToken）
@@ -31,6 +31,11 @@ def _handle_signal(signum, frame):
 
 signal.signal(signal.SIGTERM, _handle_signal)
 signal.signal(signal.SIGINT, _handle_signal)
+
+
+def _log(message: str):
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{ts}] {message}", flush=True)
 
 
 def _parse_cookie_string(cookie_str: str):
@@ -122,16 +127,7 @@ def load_cookie(session: requests.Session):
     return data, idx, cookie_map
 
 
-def save_cookie(session: requests.Session, data, idx, cookie_map):
-    jar = requests.utils.dict_from_cookiejar(session.cookies)
-
-    # 仅更新已有 key 和 COOKIE_NAME，避免引入不必要的 cookie
-    for k in list(cookie_map.keys()):
-        if k in jar:
-            cookie_map[k] = str(jar[k])
-    if COOKIE_NAME in jar:
-        cookie_map[COOKIE_NAME] = str(jar[COOKIE_NAME])
-
+def save_cookie(data, idx, cookie_map):
     new_cookie_string = _build_cookie_string(cookie_map)
     data["cookies"][idx]["cookie"] = new_cookie_string
     if "active_index" in data or COOKIE_INDEX or COOKIE_ENTRY_NAME:
@@ -162,7 +158,7 @@ def refresh_once():
         cookie_str = entry.get("cookie", "")
         cookie_map = _parse_cookie_string(cookie_str)
         if not cookie_map:
-            print(f"[{entry_name}] skip empty cookie entry at index {idx}", flush=True)
+            _log(f"[{entry_name}] skip empty cookie entry at index {idx}")
             continue
 
         session = requests.Session()
@@ -171,21 +167,22 @@ def refresh_once():
 
         fetch_url = base + FETCH_PATH
         r = session.get(fetch_url, timeout=10)
-        print("fetchToken status:", r.status_code, "body:", r.text[:200], flush=True)
+        _log(f"fetchToken status: {r.status_code} body: {r.text[:200]}")
 
         refresh_url = base + REFRESH_PATH
         r = session.get(refresh_url, timeout=10)
-        print("refreshToken status:", r.status_code, "body:", r.text[:200], flush=True)
+        _log(f"refreshToken status: {r.status_code} body: {r.text[:200]}")
 
         if r.status_code == 200:
             response_cookie_map = requests.utils.dict_from_cookiejar(r.cookies)
             mm_cookie = response_cookie_map.get(COOKIE_NAME)
             if not mm_cookie:
-                print(f"[{entry_name}] 未返回{COOKIE_NAME}", flush=True)
+                _log(f"[{entry_name}] 未返回{COOKIE_NAME}")
                 continue
 
-            save_cookie(session, data, idx, cookie_map)
-            print(f"[{entry_name}] latest_cookie: {COOKIE_NAME}={mm_cookie}", flush=True)
+            cookie_map[COOKIE_NAME] = str(mm_cookie)
+            save_cookie(data, idx, cookie_map)
+            _log(f"[{entry_name}] latest_cookie: {COOKIE_NAME}={mm_cookie}")
 
 
 def refresh_loop():
@@ -195,7 +192,7 @@ def refresh_loop():
         try:
             refresh_once()
         except Exception as e:
-            print("refresh_error:", str(e), flush=True)
+            _log(f"refresh_error: {str(e)}")
         elapsed = time.time() - start_ts
         sleep_for = interval - elapsed
         if sleep_for > 0:
