@@ -605,7 +605,11 @@ class ZaoHaoWuCrawler:
                 thread_safe_print(f"{self.thread_prefix}   ✓ 成功")
             else:
                 fail_count += 1
-                thread_safe_print(f"{self.thread_prefix}   ✗ 失败: {result.get('msg', result.get('error', '未知错误'))}")
+                err_msg = result.get("msg", result.get("error", "未知错误"))
+                thread_safe_print(f"{self.thread_prefix}   ✗ 失败: {err_msg}")
+                if "您已给该作品投过想要啦" in str(err_msg):
+                    thread_safe_print(f"{self.thread_prefix} ℹ️  已投过该作品，继续下一轮")
+                    continue
                 thread_safe_print(f"{self.thread_prefix} ⚠️  投票失败，立即终止当前线程")
                 break
             
