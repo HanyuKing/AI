@@ -81,7 +81,15 @@ USER_AGENTS = [
 
 
 class ZaoHaoWuCrawler:
-    def __init__(self, cookie: str = "", cookies: Optional[List[str]] = None, thread_id: Optional[int] = None, max_votes_per_day: int = 10):
+    def __init__(
+        self,
+        cookie: str = "",
+        cookies: Optional[List[Any]] = None,
+        thread_id: Optional[int] = None,
+        max_votes_per_day: int = 10,
+        cookie_name: Optional[str] = None,
+        cookie_names: Optional[List[str]] = None,
+    ):
         """
         初始化爬虫
         
@@ -93,13 +101,31 @@ class ZaoHaoWuCrawler:
         """
         # 支持多个Cookie
         if cookies:
-            self.cookies = cookies
+            self.cookies = []
+            self.cookie_names = []
+            for idx, item in enumerate(cookies):
+                if isinstance(item, dict):
+                    cookie_str = item.get("cookie", "")
+                    name = item.get("name") or f"Cookie {idx + 1}"
+                else:
+                    cookie_str = str(item)
+                    name = f"Cookie {idx + 1}"
+                if cookie_str:
+                    self.cookies.append(cookie_str)
+                    self.cookie_names.append(name)
+            if not self.cookies:
+                self.cookies = []
+                self.cookie_names = []
+            elif cookie_names and len(cookie_names) == len(self.cookies):
+                self.cookie_names = list(cookie_names)
             self.current_cookie_index = 0
         elif cookie:
             self.cookies = [cookie]
+            self.cookie_names = [cookie_name or "Cookie 1"]
             self.current_cookie_index = 0
         else:
             self.cookies = []
+            self.cookie_names = []
             self.current_cookie_index = 0
         
         self.thread_id = thread_id
@@ -110,7 +136,6 @@ class ZaoHaoWuCrawler:
         # 创建data文件夹用于存储生成的文件
         self.data_dir = self.script_dir / "data"
         self.data_dir.mkdir(exist_ok=True)
-        self.cookies_file = self.script_dir / "cookies.json"
         self.today = datetime.now().strftime("%Y-%m-%d")
         # 线程级别的余额不足标志（每个Cookie任务独立）
         self.insufficient_balance = False
@@ -132,6 +157,13 @@ class ZaoHaoWuCrawler:
         if not self.cookies:
             return ""
         return self.cookies[self.current_cookie_index]
+
+    def _get_current_cookie_name(self) -> str:
+        """获取当前使用的Cookie名称"""
+        if not self.cookie_names:
+            return f"Cookie {self.current_cookie_index + 1}"
+        name = self.cookie_names[self.current_cookie_index]
+        return name or f"Cookie {self.current_cookie_index + 1}"
     
     def _get_vote_count_file(self) -> Path:
         """获取投票计数文件路径"""
@@ -203,136 +235,6 @@ class ZaoHaoWuCrawler:
                 log_print(f"⚠️  保存投票计数失败: {e}")
                 return False
     
-    def _extract_cookie_from_headers(self, response: httpx.Response) -> Optional[str]:
-        """
-        从响应头中提取Cookie
-        
-        Args:
-            response: HTTP响应对象
-            
-        Returns:
-            提取的Cookie字符串，如果没有则返回None
-        """
-        # 方法1: 使用httpx的cookies属性（推荐）
-        if hasattr(response, 'cookies') and response.cookies:
-            # 将Cookies对象转换为字符串格式
-            cookie_parts = []
-            for name, value in response.cookies.items():
-                cookie_parts.append(f"{name}={value}")
-            
-            if cookie_parts:
-                new_cookie = '; '.join(cookie_parts)
-                return new_cookie
-        
-        # 方法2: 从响应头的 Set-Cookie 中提取cookie（备用）
-        set_cookies = response.headers.get_list("Set-Cookie")
-        if set_cookies:
-            # 合并所有Set-Cookie头
-            cookie_parts = []
-            for set_cookie in set_cookies:
-                # Set-Cookie格式: name=value; path=/; domain=...
-                # 只提取 name=value 部分
-                cookie_part = set_cookie.split(';')[0].strip()
-                if cookie_part:
-                    cookie_parts.append(cookie_part)
-            
-            if cookie_parts:
-                # 合并所有cookie部分
-                new_cookie = '; '.join(cookie_parts)
-                return new_cookie
-        
-        return None
-    
-    def _merge_cookies(self, current_cookie: str, new_cookie: str) -> str:
-        """
-        合并两个Cookie字符串
-        
-        Args:
-            current_cookie: 当前Cookie字符串
-            new_cookie: 新的Cookie字符串（从响应头获取）
-            
-        Returns:
-            合并后的Cookie字符串
-        """
-        if not current_cookie:
-            return new_cookie
-        if not new_cookie:
-            return current_cookie
-        
-        # 将cookie字符串转换为字典
-        def cookie_to_dict(cookie_str: str) -> Dict[str, str]:
-            cookie_dict = {}
-            for item in cookie_str.split(';'):
-                item = item.strip()
-                if '=' in item:
-                    key, value = item.split('=', 1)
-                    cookie_dict[key.strip()] = value.strip()
-            return cookie_dict
-        
-        # 合并cookie字典
-        current_dict = cookie_to_dict(current_cookie)
-        new_dict = cookie_to_dict(new_cookie)
-        
-        # 新cookie覆盖旧cookie中相同的key
-        merged_dict = {**current_dict, **new_dict}
-        
-        # 转换回字符串格式
-        merged_cookie = '; '.join([f"{k}={v}" for k, v in merged_dict.items()])
-        return merged_cookie
-    
-    def _update_cookie_from_response(self, response: httpx.Response) -> bool:
-        """
-        从响应头中提取Cookie并更新当前Cookie
-        
-        Args:
-            response: HTTP响应对象
-            
-        Returns:
-            是否成功更新Cookie
-        """
-        new_cookie = self._extract_cookie_from_headers(response)
-        if not new_cookie:
-            return False
-        
-        # 获取当前cookie
-        current_cookie = self._get_current_cookie()
-        
-        # 合并cookie（新cookie会覆盖旧cookie中相同的key）
-        merged_cookie = self._merge_cookies(current_cookie, new_cookie)
-        
-        # 如果合并后的cookie与当前cookie不同，则更新
-        if merged_cookie != current_cookie:
-            # 更新当前cookie
-            if self.cookies:
-                self.cookies[self.current_cookie_index] = merged_cookie
-                self._update_headers()
-                
-                # 保存到配置文件
-                self._save_cookies_to_file()
-                
-                thread_safe_print(f"{self.thread_prefix} 🔄 Cookie已从响应头更新并保存到配置文件")
-                return True
-        
-        return False
-    
-    def _save_cookies_to_file(self):
-        """保存Cookie列表到配置文件"""
-        if not self.cookies_file.exists():
-            return
-        
-        try:
-            with open(self.cookies_file, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            
-            # 更新cookies列表
-            config["cookies"] = self.cookies
-            
-            # 保存回文件
-            with open(self.cookies_file, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            thread_safe_print(f"{self.thread_prefix} ⚠️  保存Cookie到配置文件失败: {e}")
-    
     def _rotate_cookie(self):
         """轮换到下一个Cookie"""
         if len(self.cookies) > 1:
@@ -370,10 +272,41 @@ class ZaoHaoWuCrawler:
         max_delay = base_delay * (1 + variance)
         delay = random.uniform(min_delay, max_delay)
         time.sleep(delay)
+
+    def _safe_json(self, response: httpx.Response, context: str) -> (Optional[Dict[str, Any]], Optional[str]):
+        """
+        安全解析JSON，避免编码/解析异常导致任务中断
+
+        Returns:
+            (result, error_message)
+        """
+        try:
+            return response.json(), None
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            content = response.content or b""
+            content_type = response.headers.get("Content-Type", "")
+            encodings = []
+            if "charset=" in content_type:
+                charset = content_type.split("charset=")[-1].split(";")[0].strip()
+                if charset:
+                    encodings.append(charset)
+            encodings.extend(["utf-8", "gbk", "gb2312", "latin1"])
+
+            for enc in encodings:
+                try:
+                    text = content.decode(enc)
+                    return json.loads(text), None
+                except Exception:
+                    continue
+
+            preview = ""
+            if content:
+                preview = content[:200].decode("utf-8", errors="replace")
+            return None, f"{context} 响应不是有效JSON (status={response.status_code}, content-type={content_type}). 预览: {preview}"
     
     def get_user_info(self) -> Dict[str, Any]:
         """
-        获取用户信息，并从响应头中提取并更新Cookie
+        获取用户信息
         
         Returns:
             用户信息响应数据
@@ -386,23 +319,13 @@ class ZaoHaoWuCrawler:
             self._update_headers()
             response = self.client.get(url, params=params, headers=self.headers)
             response.raise_for_status()
-            result = response.json()
-            
-            # 不从响应头更新Cookie（保持配置文件不变）
-            
-            # 检查是否需要切换Cookie
-            if result.get("code") == 401:
-                thread_safe_print(f"{self.thread_prefix} ⚠️  Cookie可能已过期，尝试切换Cookie...")
-                self._rotate_cookie()
-                # 重试一次
-                self._update_headers()
-                response = self.client.get(url, params=params, headers=self.headers)
-                response.raise_for_status()
-                result = response.json()
-                # 不从响应头更新Cookie（保持配置文件不变）
+            result, error = self._safe_json(response, "用户信息接口")
+            if error:
+                thread_safe_print(f"{self.thread_prefix} ⚠️  {error}")
+                return {}
             
             thread_safe_print(f"{self.thread_prefix} ✓ 用户信息接口调用成功")
-            return result
+            return result or {}
         except Exception as e:
             thread_safe_print(f"{self.thread_prefix} ✗ 用户信息接口调用失败: {e}")
             raise
@@ -431,17 +354,10 @@ class ZaoHaoWuCrawler:
             self._update_headers()
             response = self.client.get(url, params=params, headers=self.headers)
             response.raise_for_status()
-            result = response.json()
-            
-            # 检查是否需要切换Cookie
-            if result.get("code") == 401:
-                thread_safe_print(f"{self.thread_prefix} ⚠️  Cookie可能已过期，尝试切换Cookie...")
-                self._rotate_cookie()
-                # 重试一次
-                self._update_headers()
-                response = self.client.get(url, params=params, headers=self.headers)
-                response.raise_for_status()
-                result = response.json()
+            result, error = self._safe_json(response, "排行榜接口")
+            if error:
+                thread_safe_print(f"{self.thread_prefix} ⚠️  {error}")
+                return []
             
             # 提取数据列表：数据结构为 {code, msg, data: {dataList: [...]}}
             if isinstance(result, dict) and result.get("code") == 200:
@@ -559,28 +475,16 @@ class ZaoHaoWuCrawler:
             self._update_headers()
             response = self.client.get(url, params=params, headers=self.headers)
             response.raise_for_status()
-            result = response.json()
+            result, error = self._safe_json(response, "wantIt接口")
+            if error:
+                thread_safe_print(f"{self.thread_prefix} ⚠️  {error}")
+                return {"success": False, "error": error, "code": -1}
             
             # 检查余额不足（线程级别）
             if self._check_insufficient_balance(result):
                 self.insufficient_balance = True
                 thread_safe_print(f"{self.thread_prefix} ⚠️  余额不足，立即停止当前线程执行")
                 return {"success": False, "error": "余额不足", "code": result.get("code", 402), "insufficient_balance": True}
-            
-            # 如果返回401，尝试切换Cookie并重试
-            if result.get("code") == 401:
-                thread_safe_print(f"{self.thread_prefix} ⚠️  Cookie可能已过期，尝试切换Cookie...")
-                self._rotate_cookie()
-                self._update_headers()
-                response = self.client.get(url, params=params, headers=self.headers)
-                response.raise_for_status()
-                result = response.json()
-                
-                # 再次检查余额不足（线程级别）
-                if self._check_insufficient_balance(result):
-                    self.insufficient_balance = True
-                    thread_safe_print(f"{self.thread_prefix} ⚠️  余额不足，立即停止当前线程执行")
-                    return {"success": False, "error": "余额不足", "code": result.get("code", 402), "insufficient_balance": True}
             
             # 投票成功，增加计数
             if result.get("code") == 200 or result.get("success") is not False:
@@ -702,6 +606,8 @@ class ZaoHaoWuCrawler:
             else:
                 fail_count += 1
                 thread_safe_print(f"{self.thread_prefix}   ✗ 失败: {result.get('msg', result.get('error', '未知错误'))}")
+                thread_safe_print(f"{self.thread_prefix} ⚠️  投票失败，立即终止当前线程")
+                break
             
             # 随机延迟，避免请求过快（模拟人类行为）
             if i < len(want_it_ids_to_process):
@@ -822,7 +728,18 @@ def load_cookies_from_file(file_path: str = "cookies.json") -> List[str]:
     return cookie_list
 
 
-def run_single_cookie_loop(cookie: str, thread_id: int, limit: int = 40, want_it_ranking_type: int = 2, delay: float = 0.5, max_votes_per_day: int = 10, start_hour: int = 7, end_hour: int = 9, schedule_enabled: bool = True):
+def run_single_cookie_loop(
+    cookie: str,
+    thread_id: int,
+    limit: int = 40,
+    want_it_ranking_type: int = 2,
+    delay: float = 0.5,
+    max_votes_per_day: int = 10,
+    start_hour: int = 7,
+    end_hour: int = 9,
+    schedule_enabled: bool = True,
+    cookie_name: Optional[str] = None,
+):
     """
     使用单个Cookie运行爬虫（独立循环，每个线程独立控制时间）
     
@@ -836,6 +753,7 @@ def run_single_cookie_loop(cookie: str, thread_id: int, limit: int = 40, want_it
         start_hour: 运行开始时间（24小时制）
         end_hour: 运行结束时间（24小时制）
         schedule_enabled: 是否启用定时任务
+        cookie_name: Cookie名称（用于日志）
     """
     thread_safe_print(f"[线程{thread_id}] 🚀 线程启动，开始独立循环执行")
     
@@ -869,7 +787,12 @@ def run_single_cookie_loop(cookie: str, thread_id: int, limit: int = 40, want_it
                     thread_safe_print(f"[线程{thread_id}] ⏰ 在运行时间范围内（{start_hour}:00 - {end_hour}:00）")
             
             # 执行爬虫任务
-            with ZaoHaoWuCrawler(cookie=cookie, thread_id=thread_id, max_votes_per_day=max_votes_per_day) as crawler:
+            with ZaoHaoWuCrawler(
+                cookie=cookie,
+                thread_id=thread_id,
+                max_votes_per_day=max_votes_per_day,
+                cookie_name=cookie_name,
+            ) as crawler:
                 result = crawler.run(
                     limit=limit,
                     want_it_ranking_type=want_it_ranking_type,
@@ -918,7 +841,15 @@ def run_single_cookie_loop(cookie: str, thread_id: int, limit: int = 40, want_it
             first_run = False
 
 
-def run_single_cookie(cookie: str, thread_id: int, limit: int = 40, want_it_ranking_type: int = 2, delay: float = 0.5, max_votes_per_day: int = 10) -> Dict[str, Any]:
+def run_single_cookie(
+    cookie: str,
+    thread_id: int,
+    limit: int = 40,
+    want_it_ranking_type: int = 2,
+    delay: float = 0.5,
+    max_votes_per_day: int = 10,
+    cookie_name: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     使用单个Cookie运行爬虫（单次执行，用于向后兼容）
     
@@ -929,12 +860,18 @@ def run_single_cookie(cookie: str, thread_id: int, limit: int = 40, want_it_rank
         want_it_ranking_type: 排行榜类型
         delay: 每次请求之间的延迟（秒）
         max_votes_per_day: 每天最大投票数（默认10次）
+        cookie_name: Cookie名称（用于日志）
         
     Returns:
         执行结果统计
     """
     try:
-        with ZaoHaoWuCrawler(cookie=cookie, thread_id=thread_id, max_votes_per_day=max_votes_per_day) as crawler:
+        with ZaoHaoWuCrawler(
+            cookie=cookie,
+            thread_id=thread_id,
+            max_votes_per_day=max_votes_per_day,
+            cookie_name=cookie_name,
+        ) as crawler:
             result = crawler.run(
                 limit=limit,
                 want_it_ranking_type=want_it_ranking_type,
@@ -1073,17 +1010,23 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
         """)
         return
     
-    # 转换为字符串列表（兼容新旧格式）
-    cookie_strings = []
-    for item in cookies:
+    # 统一转换为包含名称的Cookie列表（兼容新旧格式）
+    cookie_items: List[Dict[str, str]] = []
+    for idx, item in enumerate(cookies):
         if isinstance(item, str):
-            cookie_strings.append(item)
+            cookie_items.append({
+                "name": f"Cookie {idx + 1}",
+                "cookie": item
+            })
         elif isinstance(item, dict):
-            cookie_strings.append(item.get("cookie", ""))
+            cookie_items.append({
+                "name": item.get("name") or f"Cookie {idx + 1}",
+                "cookie": item.get("cookie", "")
+            })
     
-    cookie_strings = [c for c in cookie_strings if c]  # 过滤空字符串
+    cookie_items = [c for c in cookie_items if c.get("cookie")]  # 过滤空字符串
     
-    if not cookie_strings:
+    if not cookie_items:
         log_print("\n⚠️  警告: 未找到有效的Cookie！")
         log_print("请创建 cookies.json 文件并添加Cookie，格式如下：")
         log_print("""
@@ -1096,8 +1039,8 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
         """)
         return
     
-    log_print(f"\n✓ 加载了 {len(cookie_strings)} 个Cookie")
-    log_print(f"✓ 将使用 {len(cookie_strings)} 个线程并发执行，每个线程独立控制时间")
+    log_print(f"\n✓ 加载了 {len(cookie_items)} 个Cookie")
+    log_print(f"✓ 将使用 {len(cookie_items)} 个线程并发执行，每个线程独立控制时间")
     log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes_per_day} 次")
     if schedule_enabled:
         log_print(f"✓ 运行时间范围: {schedule_start_hour}:00 - {schedule_end_hour}:00（每个线程独立随机）")
@@ -1110,13 +1053,13 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
     delay = random.uniform(2.0, 4.0)  # 每次请求间隔2-4秒，更符合人类操作速度
     
     # 使用线程池并发执行，每个线程独立循环
-    with ThreadPoolExecutor(max_workers=len(cookie_strings)) as executor:
+    with ThreadPoolExecutor(max_workers=len(cookie_items)) as executor:
         # 提交所有任务（每个线程独立循环）
         futures = []
-        for idx, cookie in enumerate(cookie_strings):
+        for idx, cookie_item in enumerate(cookie_items):
             future = executor.submit(
                 run_single_cookie_loop,
-                cookie,
+                cookie_item["cookie"],
                 idx + 1,
                 limit,
                 want_it_ranking_type,
@@ -1124,7 +1067,8 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
                 max_votes_per_day,
                 schedule_start_hour,
                 schedule_end_hour,
-                schedule_enabled
+                schedule_enabled,
+                cookie_item["name"]
             )
             futures.append(future)
         
