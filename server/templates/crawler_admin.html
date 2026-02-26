@@ -217,12 +217,13 @@
                         <th class="border border-gray-300 px-4 py-2 text-left">名称</th>
                         <th class="border border-gray-300 px-4 py-2 text-left">Cookie预览</th>
                         <th class="border border-gray-300 px-4 py-2 text-center">今日投票</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center">总投票数</th>
                         <th class="border border-gray-300 px-4 py-2 text-center">操作</th>
                     </tr>
                 </thead>
                 <tbody id="cookies-table-body">
                     <tr>
-                        <td colspan="4" class="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                        <td colspan="5" class="border border-gray-300 px-4 py-8 text-center text-gray-500">
                             加载中...
                         </td>
                     </tr>
@@ -537,7 +538,7 @@
                 const tbody = document.getElementById('cookies-table-body');
                 
                 if (cookies.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="border border-gray-300 px-4 py-8 text-center text-gray-500">暂无Cookie，点击"添加Cookie"按钮添加</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="border border-gray-300 px-4 py-8 text-center text-gray-500">暂无Cookie，点击"添加Cookie"按钮添加</td></tr>';
                     return;
                 }
                 
@@ -546,6 +547,7 @@
                     const cookiePreview = cookie.cookie.length > 30 ? cookie.cookie.substring(0, 30) + '...' : cookie.cookie;
                     // 检查是否有今日投票记录（使用后端返回的标记）
                     const hasTodayLogs = cookie.has_today_logs || false;
+                    const totalVotesDisplay = (cookie.total_votes === null || cookie.total_votes === undefined) ? '-' : cookie.total_votes;
                     
                     return `
                         <tr class="hover:bg-gray-50">
@@ -565,6 +567,9 @@
                                 </div>
                                 <button onclick="showVoteLogs('${cookie.id}', '${escapeHtml(cookie.name)}')" 
                                     class="mt-1 text-gray-600 hover:text-gray-800 text-xs">历史日志</button>
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <span class="font-semibold">${totalVotesDisplay}</span>
                             </td>
                             <td class="border border-gray-300 px-4 py-2 text-center">
                                 <button onclick="editCookie(${index}, '${escapeHtml(cookie.name)}', '${escapeHtml(cookie.cookie.replace(/'/g, "\\'"))}')" 

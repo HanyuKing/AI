@@ -8,9 +8,11 @@ import subprocess
 import os
 import signal
 import hashlib
+import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+import httpx
 
 
 class CrawlerAdminService:
@@ -190,6 +192,7 @@ class CrawlerAdminService:
             cookie_info["today_votes"] = 0
             # 不在这里加载完整日志，只标记是否有今日投票记录（用于前端判断是否显示"查看详情"按钮）
             cookie_info["has_today_logs"] = False
+            cookie_info["total_votes"] = self._fetch_total_votes(cookie_info.get("cookie", ""))
             
             if vote_file.exists():
                 try:
@@ -205,6 +208,41 @@ class CrawlerAdminService:
                     pass
         
         return cookie_list
+
+    def _fetch_total_votes(self, cookie: str) -> Optional[int]:
+        """从用户信息接口获取总投票数（wantedNum）"""
+        if not cookie:
+            return None
+
+        url = "https://zaohaowu.com/aigc/api/user/info"
+        params = {"_timer": int(time.time() * 1000)}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Content-Type": "application/json",
+            "Cookie": cookie,
+            "Referer": "https://zaohaowu.com/",
+            "Origin": "https://zaohaowu.com",
+        }
+
+        try:
+            response = httpx.get(url, params=params, headers=headers, timeout=8.0, follow_redirects=True)
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, dict) and data.get("code") == 200:
+                wanted_num = data.get("data", {}).get("wantedNum")
+                if isinstance(wanted_num, int):
+                    return wanted_num
+                if wanted_num is not None:
+                    try:
+                        return int(wanted_num)
+                    except (TypeError, ValueError):
+                        return None
+        except Exception:
+            return None
+
+        return None
     
     def add_cookie(self, name: str, cookie: str) -> Dict[str, Any]:
         """添加Cookie"""
@@ -481,4 +519,3 @@ class LazyService:
         return getattr(service, name)
 
 crawler_admin_service = LazyService()
-
