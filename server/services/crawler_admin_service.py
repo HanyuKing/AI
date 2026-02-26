@@ -210,11 +210,11 @@ class CrawlerAdminService:
         return cookie_list
 
     def _fetch_total_votes(self, cookie: str) -> Optional[int]:
-        """从用户信息接口获取总投票数（wantedNum）"""
+        """从活动进度接口获取总投票数（currentCount）"""
         if not cookie:
             return None
 
-        url = "https://zaohaowu.com/aigc/api/user/info"
+        url = "https://zaohaowu.com/aigc/api/activity/progress"
         params = {"_timer": int(time.time() * 1000)}
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -231,14 +231,28 @@ class CrawlerAdminService:
             response.raise_for_status()
             data = response.json()
             if isinstance(data, dict) and data.get("code") == 200:
-                wanted_num = data.get("data", {}).get("wantedNum")
-                if isinstance(wanted_num, int):
-                    return wanted_num
-                if wanted_num is not None:
-                    try:
-                        return int(wanted_num)
-                    except (TypeError, ValueError):
-                        return None
+                counts: List[int] = []
+                want_it = data.get("data", {}).get("wantIt", {})
+                activities = want_it.get("activity", []) if isinstance(want_it, dict) else []
+                for activity in activities:
+                    if not isinstance(activity, dict):
+                        continue
+                    tasks = activity.get("task", [])
+                    if not isinstance(tasks, list):
+                        continue
+                    for task in tasks:
+                        if not isinstance(task, dict):
+                            continue
+                        current_count = task.get("currentCount")
+                        if isinstance(current_count, int):
+                            counts.append(current_count)
+                        elif current_count is not None:
+                            try:
+                                counts.append(int(current_count))
+                            except (TypeError, ValueError):
+                                continue
+                if counts:
+                    return max(counts)
         except Exception:
             return None
 
