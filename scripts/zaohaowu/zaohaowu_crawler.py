@@ -761,6 +761,7 @@ def run_single_cookie_loop(
     """
     thread_safe_print(f"[线程{thread_id}] 🚀 线程启动，开始独立循环执行")
 
+    first_run = True
     schedule_date = None
     daily_run_times: List[datetime] = []
     daily_run_index = 0
@@ -771,6 +772,9 @@ def run_single_cookie_loop(
         try:
             now = datetime.now()
             if schedule_enabled:
+                if first_run:
+                    thread_safe_print(f"[线程{thread_id}] ⚡ 首次启动立即执行一次（不计入今日随机 2 次）")
+
                 if schedule_date != now.date():
                     schedule_date = now.date()
                     window_start, window_end = get_time_window_bounds(schedule_date, start_hour, end_hour)
@@ -812,18 +816,19 @@ def run_single_cookie_loop(
                         f"[线程{thread_id}]   2) {daily_run_times[1].strftime('%Y-%m-%d %H:%M:%S')}"
                     )
 
-                # 等待到下一次随机执行时间
-                next_run_time = daily_run_times[daily_run_index]
-                if now < next_run_time:
-                    wait_seconds = (next_run_time - now).total_seconds()
-                    if wait_seconds > 0:
-                        wait_hours = wait_seconds / 3600
-                        thread_safe_print(f"[线程{thread_id}] ⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
-                        thread_safe_print(f"[线程{thread_id}] ⏰ 下次执行时间: {next_run_time.strftime('%Y-%m-%d %H:%M:%S')}")
-                        thread_safe_print(f"[线程{thread_id}] ⏰ 等待时间: {wait_hours:.2f} 小时 ({wait_seconds:.0f} 秒)")
-                        thread_safe_print(f"[线程{thread_id}] ⏰ 等待中...")
-                        time.sleep(wait_seconds)
-                        thread_safe_print(f"[线程{thread_id}] ✓ 到达目标时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                # 等待到下一次随机执行时间（首次启动不等待）
+                if not first_run:
+                    next_run_time = daily_run_times[daily_run_index]
+                    if now < next_run_time:
+                        wait_seconds = (next_run_time - now).total_seconds()
+                        if wait_seconds > 0:
+                            wait_hours = wait_seconds / 3600
+                            thread_safe_print(f"[线程{thread_id}] ⏰ 当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+                            thread_safe_print(f"[线程{thread_id}] ⏰ 下次执行时间: {next_run_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                            thread_safe_print(f"[线程{thread_id}] ⏰ 等待时间: {wait_hours:.2f} 小时 ({wait_seconds:.0f} 秒)")
+                            thread_safe_print(f"[线程{thread_id}] ⏰ 等待中...")
+                            time.sleep(wait_seconds)
+                            thread_safe_print(f"[线程{thread_id}] ✓ 到达目标时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
             # 执行爬虫任务
             with ZaoHaoWuCrawler(
@@ -851,14 +856,18 @@ def run_single_cookie_loop(
                     thread_safe_print(f"[线程{thread_id}] ✓ 本次执行完成，等待下一次任务执行")
                 
                 if schedule_enabled:
-                    daily_run_index += 1
-                    remaining = len(daily_run_times) - daily_run_index
-                    if remaining > 0:
-                        thread_safe_print(f"[线程{thread_id}] ⏰ 今日剩余 {remaining} 次随机执行")
+                    if first_run:
+                        first_run = False
+                    else:
+                        daily_run_index += 1
+                        remaining = len(daily_run_times) - daily_run_index
+                        if remaining > 0:
+                            thread_safe_print(f"[线程{thread_id}] ⏰ 今日剩余 {remaining} 次随机执行")
                 else:
                     # 未启用定时任务，等待1小时后重试
                     thread_safe_print(f"[线程{thread_id}] ⏰ 定时任务未启用，等待1小时后重试...")
                     time.sleep(3600)
+                    first_run = False
             
         except Exception as e:
             thread_safe_print(f"[线程{thread_id}] ✗ 执行异常: {e}")
@@ -1044,7 +1053,7 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
     主函数
     Cookie和定时任务配置从 cookies.json 文件中读取
     支持多Cookie并发执行，互不影响
-    定时任务模式下：每天在指定时间范围内随机执行 2 次
+    定时任务模式下：启动后立即执行一次，且每天在指定时间范围内随机执行 2 次
     
     Args:
         schedule_mode: 是否启用定时任务模式（None表示从配置文件读取）
@@ -1073,12 +1082,12 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
     log_print(f"\n🚀 程序启动")
     log_print(f"⏰ 当前时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # 定时任务模式：在时间范围内随机执行 2 次
+    # 定时任务模式：启动后立即执行一次，且在时间范围内随机执行 2 次
     if schedule_enabled:
         log_print("=" * 60)
         log_print("定时任务模式已启用")
         log_print(f"运行时间范围: {schedule_start_hour}:00 - {schedule_end_hour}:00")
-        log_print("（每天在时间范围内随机执行 2 次）")
+        log_print("（启动后立即执行一次，且每天在时间范围内随机执行 2 次）")
         log_print("=" * 60)
     
     # 使用已加载的Cookie（已在函数开头加载）
