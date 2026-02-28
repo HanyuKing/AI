@@ -1,9 +1,11 @@
 import os
 import uuid
 import shutil
+import base64
+import mimetypes
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from server.core.config import settings
 from server.services.file_service import FileService
@@ -33,6 +35,15 @@ async def save_upload_file(upload_file: UploadFile) -> str:
         shutil.copyfileobj(upload_file.file, buffer)
         
     return str(temp_path)
+
+def file_to_base64_data_uri(file_path: str) -> tuple[str, str]:
+    """Read file and return (data_uri, mime_type)."""
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+    with open(file_path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:{mime_type};base64,{encoded}", mime_type
 
 @router.post("/pdf/compress")
 async def compress_pdf(
@@ -323,7 +334,8 @@ async def generate_id_photo(
     custom_width_mm: Optional[int] = Form(None),
     custom_height_mm: Optional[int] = Form(None),
     bg_color: str = Form("#FFFFFF"),
-    beautify: bool = Form(True)
+    beautify: bool = Form(True),
+    response_format: Optional[str] = Form(None)
 ):
     """
     生成证件照
@@ -366,10 +378,21 @@ async def generate_id_photo(
             bg_color=bg_color,
             use_beautify=beautify
         )
-        
+
+        if response_format and response_format.lower() == "base64":
+            data_uri, mime_type = file_to_base64_data_uri(output_path)
+            background_tasks.add_task(cleanup_files, input_path, output_path)
+            return JSONResponse(
+                {
+                    "base64": data_uri,
+                    "mime": mime_type,
+                    "filename": output_filename
+                }
+            )
+
         background_tasks.add_task(cleanup_files, input_path, output_path)
         return FileResponse(
-            output_path, 
+            output_path,
             filename=output_filename,
             media_type="image/png"
         )
@@ -393,7 +416,8 @@ async def render_id_photo(
     scale_x: float = Form(1),
     scale_y: float = Form(1),
     bg_color: str = Form(None),
-    dpi: int = Form(300)
+    dpi: int = Form(300),
+    response_format: Optional[str] = Form(None)
 ):
     """
     后端渲染证件照（高保真）
@@ -422,10 +446,21 @@ async def render_id_photo(
             bg_color=bg_color,
             dpi=dpi
         )
-        
+
+        if response_format and response_format.lower() == "base64":
+            data_uri, mime_type = file_to_base64_data_uri(output_path)
+            background_tasks.add_task(cleanup_files, input_path, output_path)
+            return JSONResponse(
+                {
+                    "base64": data_uri,
+                    "mime": mime_type,
+                    "filename": output_filename
+                }
+            )
+
         background_tasks.add_task(cleanup_files, input_path, output_path)
         return FileResponse(
-            output_path, 
+            output_path,
             filename=output_filename,
             media_type="image/png"
         )
@@ -501,4 +536,3 @@ async def base64_to_image(
         raise HTTPException(status_code=400, detail="无效的 Base64 编码")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"转换失败: {str(e)}")
-
