@@ -3,8 +3,9 @@ import uuid
 import shutil
 import base64
 import mimetypes
+import time
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from server.core.config import settings
@@ -15,6 +16,8 @@ from server.services.id_photo_service import IdPhotoService
 from server.core.connection_manager import manager
 
 router = APIRouter()
+TEMP_FILE_TTL_SECONDS = 15 * 60
+_TEMP_FILE_REGISTRY = {}
 
 def cleanup_files(*file_paths: str):
     """Background task to remove temporary files"""
@@ -44,6 +47,49 @@ def file_to_base64_data_uri(file_path: str) -> tuple[str, str]:
     with open(file_path, "rb") as f:
         encoded = base64.b64encode(f.read()).decode("utf-8")
     return f"data:{mime_type};base64,{encoded}", mime_type
+
+
+def cleanup_expired_temp_files():
+    now = time.time()
+    expired_tokens = []
+    for token, item in _TEMP_FILE_REGISTRY.items():
+        expires_at = float(item.get("expires_at", 0))
+        if expires_at <= now:
+            file_path = str(item.get("path", ""))
+            cleanup_files(file_path)
+            expired_tokens.append(token)
+    for token in expired_tokens:
+        _TEMP_FILE_REGISTRY.pop(token, None)
+
+
+def register_temp_file(file_path: str) -> str:
+    cleanup_expired_temp_files()
+    token = uuid.uuid4().hex
+    _TEMP_FILE_REGISTRY[token] = {
+        "path": file_path,
+        "expires_at": time.time() + TEMP_FILE_TTL_SECONDS
+    }
+    return token
+
+
+def get_temp_file(token: str) -> Optional[str]:
+    item = _TEMP_FILE_REGISTRY.get(token)
+    if not item:
+        return None
+    file_path = str(item.get("path", ""))
+    if not file_path or not os.path.exists(file_path):
+        _TEMP_FILE_REGISTRY.pop(token, None)
+        return None
+    return file_path
+
+
+def cleanup_registered_temp_file(token: str):
+    item = _TEMP_FILE_REGISTRY.pop(token, None)
+    if not item:
+        return
+    file_path = str(item.get("path", ""))
+    if file_path:
+        cleanup_files(file_path)
 
 @router.post("/pdf/compress")
 async def compress_pdf(
@@ -326,9 +372,24 @@ async def get_id_photo_specs():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/image/id-photo/temp/{token}")
+async def get_id_photo_temp_file(token: str, background_tasks: BackgroundTasks):
+    file_path = get_temp_file(token)
+    if not file_path:
+        raise HTTPException(status_code=404, detail="文件不存在或已过期")
+    filename = os.path.basename(file_path)
+    background_tasks.add_task(cleanup_registered_temp_file, token)
+    return FileResponse(
+        file_path,
+        filename=filename,
+        media_type="image/png"
+    )
+
 @router.post("/image/id-photo")
 async def generate_id_photo(
     background_tasks: BackgroundTasks,
+    request: Request,
     file: UploadFile = File(...),
     size: str = Form(None),
     custom_width_mm: Optional[int] = Form(None),
@@ -390,6 +451,21 @@ async def generate_id_photo(
                 }
             )
 
+        if response_format and response_format.lower() == "file":
+            token = register_temp_file(output_path)
+            download_path = f"/api/media/image/id-photo/temp/{token}"
+            download_url = f"{str(request.base_url).rstrip('/')}{download_path}"
+            background_tasks.add_task(cleanup_files, input_path)
+            return JSONResponse(
+                {
+                    "path": download_path,
+                    "url": download_url,
+                    "filename": output_filename,
+                    "mime": "image/png",
+                    "expires_in": TEMP_FILE_TTL_SECONDS
+                }
+            )
+
         background_tasks.add_task(cleanup_files, input_path, output_path)
         return FileResponse(
             output_path,
@@ -405,6 +481,7 @@ async def generate_id_photo(
 @router.post("/image/id-photo/render")
 async def render_id_photo(
     background_tasks: BackgroundTasks,
+    request: Request,
     file: UploadFile = File(...),
     crop_x: float = Form(...),
     crop_y: float = Form(...),
@@ -455,6 +532,21 @@ async def render_id_photo(
                     "base64": data_uri,
                     "mime": mime_type,
                     "filename": output_filename
+                }
+            )
+
+        if response_format and response_format.lower() == "file":
+            token = register_temp_file(output_path)
+            download_path = f"/api/media/image/id-photo/temp/{token}"
+            download_url = f"{str(request.base_url).rstrip('/')}{download_path}"
+            background_tasks.add_task(cleanup_files, input_path)
+            return JSONResponse(
+                {
+                    "path": download_path,
+                    "url": download_url,
+                    "filename": output_filename,
+                    "mime": "image/png",
+                    "expires_in": TEMP_FILE_TTL_SECONDS
                 }
             )
 
