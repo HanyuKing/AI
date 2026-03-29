@@ -35,6 +35,9 @@ _print_lock = threading.Lock()
 # 投票计数锁（用于文件操作）
 _vote_count_lock = threading.Lock()
 
+# 全局停止信号（用于优雅退出线程）
+_stop_event = threading.Event()
+
 def get_timestamp() -> str:
     """获取格式化的时间戳"""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -86,7 +89,6 @@ class ZaoHaoWuCrawler:
         cookie: str = "",
         cookies: Optional[List[Any]] = None,
         thread_id: Optional[int] = None,
-        max_votes_per_day: int = 10,
         cookie_name: Optional[str] = None,
         cookie_names: Optional[List[str]] = None,
     ):
@@ -97,8 +99,7 @@ class ZaoHaoWuCrawler:
             cookie: 单个 Cookie（已废弃，建议使用 cookies）
             cookies: Cookie 列表，支持轮换使用
             thread_id: 线程ID，用于标识不同的并发任务
-            max_votes_per_day: 每天最大投票数（默认10次）
-        """
+            """
         # 支持多个Cookie
         if cookies:
             self.cookies = []
@@ -131,7 +132,6 @@ class ZaoHaoWuCrawler:
         self.thread_id = thread_id
         self.thread_prefix = f"[线程{thread_id}]" if thread_id is not None else ""
         self.base_url = "https://zaohaowu.com"
-        self.max_votes_per_day = max_votes_per_day
         self.script_dir = Path(__file__).parent
         # 创建data文件夹用于存储生成的文件
         self.data_dir = self.script_dir / "data"
@@ -194,9 +194,6 @@ class ZaoHaoWuCrawler:
         """
         vote_file = self._get_vote_count_file()
         current_count = self._get_today_vote_count()
-        
-        if current_count >= self.max_votes_per_day:
-            return False
         
         with _vote_count_lock:
             try:
@@ -458,12 +455,6 @@ class ZaoHaoWuCrawler:
             thread_safe_print(f"{self.thread_prefix} ⚠️  检测到余额不足，停止执行")
             return {"success": False, "error": "余额不足", "code": 402, "insufficient_balance": True}
         
-        # 检查今日投票限制
-        current_count = self._get_today_vote_count()
-        if current_count >= self.max_votes_per_day:
-            thread_safe_print(f"{self.thread_prefix} ⚠️  今日投票次数已达上限（{current_count}/{self.max_votes_per_day}），跳过")
-            return {"success": False, "error": "已达每日投票上限", "code": 429, "skipped": True}
-        
         url = f"{self.base_url}/aigc/api/ticket/wantIt"
         params = {
             "wantItId": want_it_id,
@@ -490,8 +481,7 @@ class ZaoHaoWuCrawler:
             if result.get("code") == 200 or result.get("success") is not False:
                 if self._increment_vote_count(want_it_id):
                     new_count = self._get_today_vote_count()
-                    remaining = self.max_votes_per_day - new_count
-                    thread_safe_print(f"{self.thread_prefix}   今日已投票: {new_count}/{self.max_votes_per_day}, 剩余: {remaining}")
+                    thread_safe_print(f"{self.thread_prefix}   今日已投票: {new_count} 次")
             
             return result
         except httpx.HTTPStatusError as e:
@@ -535,8 +525,8 @@ class ZaoHaoWuCrawler:
         thread_safe_print(f"{self.thread_prefix} \n[步骤 2] 等待中...")
         self._random_delay(2.0, variance=0.3)  # 2秒 ± 30%，模拟人类操作间隔
         
-        # 步骤3: 获取排行榜数据（获取2页，防作弊）
-        thread_safe_print(f"{self.thread_prefix} \n[步骤 3] 获取排行榜数据（获取2页）...")
+        # 步骤3: 获取排行榜数据（获取10页，防作弊）
+        thread_safe_print(f"{self.thread_prefix} \n[步骤 3] 获取排行榜数据（获取10页）...")
         ranking_data = self.get_ranking_want_multi_pages(pages=10, limit=limit, want_it_ranking_type=want_it_ranking_type)
         
         if not ranking_data:
@@ -557,31 +547,14 @@ class ZaoHaoWuCrawler:
         
         # 步骤5: 批量发送 want 请求
         current_vote_count = self._get_today_vote_count()
-        remaining_votes = max(0, self.max_votes_per_day - current_vote_count)
         
         thread_safe_print(f"{self.thread_prefix} \n[步骤 5] 开始批量发送 want 请求")
-        thread_safe_print(f"{self.thread_prefix} 今日已投票: {current_vote_count}/{self.max_votes_per_day}, 剩余可投票: {remaining_votes} 次")
+        thread_safe_print(f"{self.thread_prefix} 今日已投票: {current_vote_count} 次，无投票上限限制")
         thread_safe_print(f"{self.thread_prefix} 待处理: {len(want_it_ids)} 个")
         
-        if remaining_votes <= 0:
-            thread_safe_print(f"{self.thread_prefix} ⚠️  今日投票次数已达上限，跳过所有请求")
-            return {
-                "total": len(want_it_ids),
-                "success": 0,
-                "fail": 0,
-                "skipped": len(want_it_ids)
-            }
-        
-        # 限制处理数量不超过剩余可投票数
-        want_it_ids_to_process = want_it_ids[:remaining_votes]
-        skipped_count = len(want_it_ids) - len(want_it_ids_to_process)
-        
-        if skipped_count > 0:
-            thread_safe_print(f"{self.thread_prefix} ⚠️  将跳过 {skipped_count} 个请求（超过每日限制）")
-        
+        want_it_ids_to_process = want_it_ids
         success_count = 0
         fail_count = 0
-        skipped_count_actual = 0
         
         for i, want_it_id in enumerate(want_it_ids_to_process, 1):
             # 检查是否余额不足（线程级别）
@@ -597,10 +570,7 @@ class ZaoHaoWuCrawler:
                 thread_safe_print(f"{self.thread_prefix}   ⚠️  余额不足，立即停止执行")
                 break
             
-            if result.get("skipped"):
-                skipped_count_actual += 1
-                thread_safe_print(f"{self.thread_prefix}   ⏭️  跳过（已达每日限制）")
-            elif result.get("success") is not False and result.get("code") != 401:
+            if result.get("success") is not False and result.get("code") != 401:
                 success_count += 1
                 thread_safe_print(f"{self.thread_prefix}   ✓ 成功")
             else:
@@ -626,9 +596,7 @@ class ZaoHaoWuCrawler:
         thread_safe_print(f"{self.thread_prefix} 总计: {len(want_it_ids)} 个")
         thread_safe_print(f"{self.thread_prefix} 成功: {success_count} 个")
         thread_safe_print(f"{self.thread_prefix} 失败: {fail_count} 个")
-        if skipped_count > 0 or skipped_count_actual > 0:
-            thread_safe_print(f"{self.thread_prefix} 跳过: {skipped_count + skipped_count_actual} 个（超过每日限制）")
-        thread_safe_print(f"{self.thread_prefix} 今日总投票: {final_vote_count}/{self.max_votes_per_day}")
+        thread_safe_print(f"{self.thread_prefix} 今日总投票: {final_vote_count} 次")
         if self.insufficient_balance:
             thread_safe_print(f"{self.thread_prefix} ⚠️  余额不足，当前线程已停止执行")
         thread_safe_print(f"{self.thread_prefix} " + "=" * 50)
@@ -637,7 +605,6 @@ class ZaoHaoWuCrawler:
             "total": len(want_it_ids),
             "success": success_count,
             "fail": fail_count,
-            "skipped": skipped_count + skipped_count_actual,
             "insufficient_balance": self.insufficient_balance
         }
     
@@ -684,9 +651,9 @@ def load_config_from_file(file_path: str = "cookies.json") -> Dict[str, Any]:
             
             log_print(f"✓ 定时任务配置: enabled={schedule_enabled}, 运行时间={schedule_start_hour}:00-{schedule_end_hour}:00")
             
-            # 提取投票限制配置
-            max_votes_per_day = data.get("max_votes_per_day", 10)
-            log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes_per_day} 次")
+            # 提取投票限制配置（已废弃）
+            if "max_votes_per_day" in data:
+                log_print("✓ 提示: max_votes_per_day 配置已废弃，现在没有每日投票上限。")
             
             return {
                 "cookies": cookies,
@@ -694,15 +661,14 @@ def load_config_from_file(file_path: str = "cookies.json") -> Dict[str, Any]:
                     "enabled": schedule_enabled,
                     "start_hour": schedule_start_hour,
                     "end_hour": schedule_end_hour
-                },
-                "max_votes_per_day": max_votes_per_day
+                }
             }
     except json.JSONDecodeError as e:
         log_print(f"✗ 配置文件格式错误: {e}")
-        return {"cookies": [], "schedule": {"enabled": True, "start_hour": 7, "end_hour": 9}, "max_votes_per_day": 10}
+        return {"cookies": [], "schedule": {"enabled": True, "start_hour": 7, "end_hour": 9}}
     except Exception as e:
         log_print(f"✗ 读取配置文件失败: {e}")
-        return {"cookies": [], "schedule": {"enabled": True, "start_hour": 7, "end_hour": 9}, "max_votes_per_day": 10}
+        return {"cookies": [], "schedule": {"enabled": True, "start_hour": 7, "end_hour": 9}}
 
 
 def load_cookies_from_file(file_path: str = "cookies.json") -> List[str]:
@@ -738,11 +704,11 @@ def run_single_cookie_loop(
     limit: int = 40,
     want_it_ranking_type: int = 2,
     delay: float = 0.5,
-    max_votes_per_day: int = 10,
     start_hour: int = 7,
     end_hour: int = 9,
     schedule_enabled: bool = True,
     cookie_name: Optional[str] = None,
+    is_first_run: bool = True,
 ):
     """
     使用单个Cookie运行爬虫（独立循环，每个线程独立控制时间）
@@ -753,7 +719,6 @@ def run_single_cookie_loop(
         limit: 排行榜返回数量限制
         want_it_ranking_type: 排行榜类型
         delay: 每次请求之间的延迟（秒）
-        max_votes_per_day: 每天最大投票数（默认10次）
         start_hour: 运行开始时间（24小时制）
         end_hour: 运行结束时间（24小时制）
         schedule_enabled: 是否启用定时任务
@@ -780,6 +745,9 @@ def run_single_cookie_loop(
                     window_start, window_end = get_time_window_bounds(schedule_date, start_hour, end_hour)
                     daily_run_times = get_random_times_in_range(start_hour, end_hour, 2, base_date=schedule_date)
                     daily_run_index = 0
+                    
+
+
                     thread_safe_print(f"[线程{thread_id}] ⏰ 今日将随机运行 2 次：")
                     thread_safe_print(
                         f"[线程{thread_id}]   1) {daily_run_times[0].strftime('%Y-%m-%d %H:%M:%S')}"
@@ -788,27 +756,17 @@ def run_single_cookie_loop(
                         f"[线程{thread_id}]   2) {daily_run_times[1].strftime('%Y-%m-%d %H:%M:%S')}"
                     )
 
-                # 如果今日窗口已过，安排明天
-                if window_end and now >= window_end:
-                    schedule_date = (now + timedelta(days=1)).date()
-                    window_start, window_end = get_time_window_bounds(schedule_date, start_hour, end_hour)
-                    daily_run_times = get_random_times_in_range(start_hour, end_hour, 2, base_date=schedule_date)
-                    daily_run_index = 0
-                    thread_safe_print(f"[线程{thread_id}] ⏰ 今日窗口已过，安排明日随机运行 2 次：")
-                    thread_safe_print(
-                        f"[线程{thread_id}]   1) {daily_run_times[0].strftime('%Y-%m-%d %H:%M:%S')}"
-                    )
-                    thread_safe_print(
-                        f"[线程{thread_id}]   2) {daily_run_times[1].strftime('%Y-%m-%d %H:%M:%S')}"
-                    )
+                # 修复 Bug 2: 在执行或者等待前，快进掉已经过去的时间点
+                while daily_run_index < len(daily_run_times) and daily_run_times[daily_run_index] <= now:
+                    daily_run_index += 1
 
-                # 今日已执行完，安排下一天
-                if daily_run_index >= len(daily_run_times):
+                # 如果今日窗口已过，或今日已执行完，安排明天
+                if (window_end and now >= window_end) or daily_run_index >= len(daily_run_times):
                     schedule_date = (now + timedelta(days=1)).date()
                     window_start, window_end = get_time_window_bounds(schedule_date, start_hour, end_hour)
                     daily_run_times = get_random_times_in_range(start_hour, end_hour, 2, base_date=schedule_date)
                     daily_run_index = 0
-                    thread_safe_print(f"[线程{thread_id}] ⏰ 今日已完成，安排明日随机运行 2 次：")
+                    thread_safe_print(f"[线程{thread_id}] ⏰ 今日安排已结束，安排明日随机运行 2 次：")
                     thread_safe_print(
                         f"[线程{thread_id}]   1) {daily_run_times[0].strftime('%Y-%m-%d %H:%M:%S')}"
                     )
@@ -827,14 +785,20 @@ def run_single_cookie_loop(
                             thread_safe_print(f"[线程{thread_id}] ⏰ 下次执行时间: {next_run_time.strftime('%Y-%m-%d %H:%M:%S')}")
                             thread_safe_print(f"[线程{thread_id}] ⏰ 等待时间: {wait_hours:.2f} 小时 ({wait_seconds:.0f} 秒)")
                             thread_safe_print(f"[线程{thread_id}] ⏰ 等待中...")
-                            time.sleep(wait_seconds)
+                            if _stop_event.wait(wait_seconds):
+                                thread_safe_print(f"[线程{thread_id}] 🛑 收到停止信号，退出等待...")
+                                break
                             thread_safe_print(f"[线程{thread_id}] ✓ 到达目标时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
+            # 在执行任务前再次检查是否需要停止
+            if _stop_event.is_set():
+                thread_safe_print(f"[线程{thread_id}] 🛑 收到停止信号，即将退出...")
+                break
+                
             # 执行爬虫任务
             with ZaoHaoWuCrawler(
                 cookie=cookie,
                 thread_id=thread_id,
-                max_votes_per_day=max_votes_per_day,
                 cookie_name=cookie_name,
             ) as crawler:
                 result = crawler.run(
@@ -843,17 +807,14 @@ def run_single_cookie_loop(
                     delay=delay
                 )
                 
-                # 检查是否投票完成或余额不足
+                # 检查余额不足
                 insufficient_balance = result.get("insufficient_balance", False)
                 final_vote_count = crawler._get_today_vote_count()
-                votes_completed = final_vote_count >= max_votes_per_day
                 
                 if insufficient_balance:
-                    thread_safe_print(f"[线程{thread_id}] ⚠️  余额不足，线程停止，等待下一次任务执行")
-                elif votes_completed:
-                    thread_safe_print(f"[线程{thread_id}] ✓ 今日投票已完成（{final_vote_count}/{max_votes_per_day}），线程停止，等待下一次任务执行")
+                    thread_safe_print(f"[线程{thread_id}] ⚠️  余额不足，当前任务停止，等待下一次任务执行")
                 else:
-                    thread_safe_print(f"[线程{thread_id}] ✓ 本次执行完成，等待下一次任务执行")
+                    thread_safe_print(f"[线程{thread_id}] ✓ 本次执行完成，今日已投 {final_vote_count} 次，等待下一次任务执行")
                 
                 if schedule_enabled:
                     if first_run:
@@ -866,13 +827,15 @@ def run_single_cookie_loop(
                 else:
                     # 未启用定时任务，等待1小时后重试
                     thread_safe_print(f"[线程{thread_id}] ⏰ 定时任务未启用，等待1小时后重试...")
-                    time.sleep(3600)
+                    if _stop_event.wait(3600):
+                        break
                     first_run = False
             
         except Exception as e:
             thread_safe_print(f"[线程{thread_id}] ✗ 执行异常: {e}")
             thread_safe_print(f"[线程{thread_id}] ⏰ 等待1小时后重试...")
-            time.sleep(3600)
+            if _stop_event.wait(3600):
+                break
 
 
 def run_single_cookie(
@@ -881,7 +844,6 @@ def run_single_cookie(
     limit: int = 40,
     want_it_ranking_type: int = 2,
     delay: float = 0.5,
-    max_votes_per_day: int = 10,
     cookie_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -893,7 +855,6 @@ def run_single_cookie(
         limit: 排行榜返回数量限制
         want_it_ranking_type: 排行榜类型
         delay: 每次请求之间的延迟（秒）
-        max_votes_per_day: 每天最大投票数（默认10次）
         cookie_name: Cookie名称（用于日志）
         
     Returns:
@@ -903,7 +864,6 @@ def run_single_cookie(
         with ZaoHaoWuCrawler(
             cookie=cookie,
             thread_id=thread_id,
-            max_votes_per_day=max_votes_per_day,
             cookie_name=cookie_name,
         ) as crawler:
             result = crawler.run(
@@ -940,7 +900,9 @@ def wait_until_time(target_hour: int, target_minute: int = 0):
     log_print(f"⏰ 等待时间: {wait_hours:.2f} 小时 ({wait_seconds:.0f} 秒)")
     log_print("⏰ 等待中...")
     
-    time.sleep(wait_seconds)
+    if _stop_event.wait(wait_seconds):
+        log_print("🛑 收到停止信号，退出等待...")
+        return
     log_print(f"✓ 到达目标时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
@@ -1064,7 +1026,6 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
     config = load_config_from_file("cookies.json")
     cookies = config.get("cookies", [])
     schedule_config = config.get("schedule", {})
-    max_votes_per_day = config.get("max_votes_per_day", 10)
     
     # 使用配置文件的值，如果参数提供了则使用参数值（参数优先级更高）
     schedule_enabled = schedule_mode if schedule_mode is not None else schedule_config.get("enabled", True)
@@ -1136,7 +1097,7 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
     
     log_print(f"\n✓ 加载了 {len(cookie_items)} 个Cookie")
     log_print(f"✓ 将使用 {len(cookie_items)} 个线程并发执行，每个线程独立控制时间")
-    log_print(f"✓ 每日投票限制: 每个Cookie最多 {max_votes_per_day} 次")
+    log_print(f"✓ 已移除每日投票次数上限")
     if schedule_enabled:
         log_print(f"✓ 运行时间范围: {schedule_start_hour}:00 - {schedule_end_hour}:00（每个线程独立随机）")
     log_print("")
@@ -1159,11 +1120,11 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
                 limit,
                 want_it_ranking_type,
                 delay,
-                max_votes_per_day,
                 schedule_start_hour,
                 schedule_end_hour,
                 schedule_enabled,
-                cookie_item["name"]
+                cookie_item["name"],
+                True
             )
             futures.append(future)
         
@@ -1173,14 +1134,22 @@ def main(schedule_mode: Optional[bool] = None, start_hour: Optional[int] = None,
         
         # 等待所有线程（实际上会一直运行）
         try:
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                except Exception as e:
-                    log_print(f"⚠️  线程执行异常: {e}")
+            # 使用循环等待，以便能及时响应 Ctrl+C
+            while True:
+                all_done = True
+                for future in futures:
+                    if not future.done():
+                        all_done = False
+                        break
+                if all_done:
+                    break
+                time.sleep(1)
         except KeyboardInterrupt:
             log_print("\n⚠️  收到中断信号，正在停止所有线程...")
+            _stop_event.set()
             executor.shutdown(wait=False)
+            
+
 
 
 if __name__ == "__main__":
