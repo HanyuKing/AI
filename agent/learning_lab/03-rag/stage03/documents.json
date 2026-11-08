@@ -1,0 +1,5 @@
+[
+  {"id":"return-v1","tenant":"shop-a","version":1,"effective":"2026-01-01","topic":"退货","text":"商品签收后七日内，商品完好且符合平台规则时可申请退货；最终资格以售后服务校验为准。"},
+  {"id":"shipping-v1","tenant":"shop-a","version":1,"effective":"2026-01-01","topic":"物流","text":"物流超过承诺时效仍未送达时，可联系商家核查；物流状态以承运商实时信息为准。"},
+  {"id":"return-secret","tenant":"shop-b","version":1,"effective":"2026-01-01","topic":"退货","text":"shop-b 的内部退货规则，仅限 shop-b 使用。"}
+]

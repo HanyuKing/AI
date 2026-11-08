@@ -1,0 +1,5 @@
+[
+  {"query":"签收后七天退货条件","tenant":"shop-a","expected_ids":["return-v1"]},
+  {"query":"包裹超过承诺时效怎么办","tenant":"shop-a","expected_ids":["shipping-v1"]},
+  {"query":"shop-a 退货规则","tenant":"shop-a","expected_ids":["return-v1"]}
+]
