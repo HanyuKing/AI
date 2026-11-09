@@ -49,7 +49,7 @@ data = get_logistics(arguments["order_id"], self.user_id)
 
 ```bash
 cd agent/learning_lab
-PYTHONPATH=02-tools-workflow python -m stage02.app
+PYTHONPATH=.:02-tools-workflow python -m stage02.app
 ```
 
 试试：`我的 O-1001 到哪了？`、`O-1001 的售后怎么样？`、`物流到哪了？` 后接 `O-1001`。再把演示用户改成 `U-200`，查询 `O-1001`，确认系统拒绝越权而非编造物流状态。
@@ -59,17 +59,26 @@ PYTHONPATH=02-tools-workflow python -m stage02.app
 ```bash
 cd agent/learning_lab
 pip install -e '.[mcp]'
-PYTHONPATH=02-tools-workflow python -m stage02.mcp_server
+PYTHONPATH=.:02-tools-workflow python -m stage02.mcp_server
 ```
 
-这是 stdio server，终端保持运行，MCP Inspector 或兼容 Host 作为 client 连接。检查三个工具的名称、描述、参数 schema、正常返回和错误。不要把终端输出的工具结果直接视为可信指令；结果是业务数据，不是系统提示词。
+如果终端当前已经位于 `02-tools-workflow` 阶段目录，则运行：
+
+```bash
+pip install -e '../.[mcp]'
+PYTHONPATH=..:. python -m stage02.mcp_server
+```
+
+`pyproject.toml` 在 `learning_lab` 根目录，所以从阶段目录安装时必须用 `../.[mcp]`；单独执行 `pip install -e .` 会把本阶段目录误当作项目。`mcp` SDK 是可选依赖，未安装时会出现 `No module named 'mcp'`。安装后 stdio server 会保持终端运行，由 MCP Inspector 或兼容 Host 作为 client 连接。检查三个工具的名称、描述、参数 schema、正常返回和错误。不要把终端输出的工具结果直接视为可信指令；结果是业务数据，不是系统提示词。
 
 仓库还提供最小 Client/Host 示例，会启动 Server 子进程、初始化会话、发现工具并调用物流工具：
 
 ```bash
 cd agent/learning_lab
-PYTHONPATH=02-tools-workflow python -m stage02.mcp_client
+PYTHONPATH=.:02-tools-workflow python -m stage02.mcp_client
 ```
+
+若当前目录已是 `02-tools-workflow`，client 命令为 `PYTHONPATH=..:. python -m stage02.mcp_client`。
 
 重点看 `ClientSession.initialize → list_tools → call_tool` 的生命周期。stdio Client 管理子进程与读写流；远程部署时传输、认证和重连方式会不同，但工具仍需在 Server 端做业务授权。
 

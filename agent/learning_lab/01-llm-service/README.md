@@ -45,7 +45,7 @@ Semaphore 释放由 `async with` 保证，即使异常也不会永久占住并�
 
 ```bash
 cd agent/learning_lab
-PYTHONPATH=01-llm-service uvicorn stage01.app:app --reload
+PYTHONPATH=.:01-llm-service uvicorn stage01.app:app --reload
 ```
 
 ```bash

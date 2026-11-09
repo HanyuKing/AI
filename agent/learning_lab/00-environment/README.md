@@ -32,22 +32,35 @@ if not 1 <= settings.port <= 65535:
 
 ## 动手运行
 
+以下命令分两种工作目录，选择一种执行，不要混用相对路径。
+
+### 方式 A：从课程根目录运行（推荐）
+
 ```bash
 cd agent/learning_lab
 pip install -e '.[dev]'
-PYTHONPATH=00-environment APP_PORT=8010 python -m stage00.app
+PYTHONPATH=.:00-environment APP_PORT=8010 python -m stage00.app
 ```
 
-开发时也可用 `PYTHONPATH=00-environment uvicorn stage00.app:app --reload --port 8010`；此时 Uvicorn CLI 的 `--port` 是监听配置。
+### 方式 B：当前目录已经是 `00-environment`
+
+```bash
+pip install -e ..
+PYTHONPATH=..:. APP_PORT=8010 python -m stage00.app
+```
+
+这里 `..` 是课程根目录 `learning_lab`（包含 `pyproject.toml` 和 `shared/`），`.` 是当前阶段目录（包含 `stage00/`）。因此不要在 `00-environment` 目录执行 `pip install -e .`，也不要在那里使用根目录版本的 `PYTHONPATH=.:00-environment`。
+
+开发时从课程根目录启动 Uvicorn：`PYTHONPATH=.:00-environment uvicorn stage00.app:app --reload --port 8010`；若当前目录在 `00-environment`，则使用 `PYTHONPATH=..:. uvicorn stage00.app:app --reload --port 8010`。
 
 另开终端检查：
 
 ```bash
-curl -i http://127.0.0.1:8000/health
-curl -i -H 'X-Request-Id: lesson-001' http://127.0.0.1:8000/ready
+curl -i http://127.0.0.1:8010/health
+curl -i -H 'X-Request-Id: lesson-001' http://127.0.0.1:8010/ready
 ```
 
-第二个响应应带回 `X-Request-Id: lesson-001` 和处理耗时头。访问 `http://127.0.0.1:8000/docs` 查看自动生成的 OpenAPI 文档。
+第二个响应应带回 `X-Request-Id: lesson-001` 和处理耗时头。访问 `http://127.0.0.1:8010/docs` 查看自动生成的 OpenAPI 文档。
 
 ## 课堂实验
 

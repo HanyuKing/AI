@@ -49,7 +49,7 @@ if not draft or draft["status"] != "pending_approval":
 
 ```bash
 cd agent/learning_lab
-PYTHONPATH=04-state-approval python -m stage04.app
+PYTHONPATH=.:04-state-approval python -m stage04.app
 ```
 
 默认演示 `U-200` 的已签收订单 `O-1002`：草稿显示领域订单金额，独立 reviewer 批准，再用同一 key 重复执行。第二次应返回相同结果。将 requester 改成 `U-100`、订单改成未送达订单，或让 requester 自己审批，观察拒绝原因。

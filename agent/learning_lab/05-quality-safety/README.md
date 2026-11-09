@@ -43,7 +43,7 @@ Prompt Injection 检测器只标记明显模式，攻击可以换语言、编码
 
 ```bash
 cd agent/learning_lab
-PYTHONPATH=05-quality-safety python -m stage05.evaluate
+PYTHONPATH=.:05-quality-safety python -m stage05.evaluate
 python -m unittest discover -s tests -v
 ```
 

@@ -42,8 +42,8 @@ candidates = [doc for doc in self.documents
 
 ```bash
 cd agent/learning_lab
-PYTHONPATH=03-rag python -m stage03.app
-PYTHONPATH=03-rag python -m stage03.evaluate
+PYTHONPATH=.:03-rag python -m stage03.app
+PYTHONPATH=.:03-rag python -m stage03.evaluate
 ```
 
 试查退货、物流和无关主题。修改 `as_of` 日期，确认生效时间过滤。把 tenant 改成 `shop-b`，确认 shop-a 文档不会出现在结果；搜索 shop-a 时 `return-secret` 永远不能进入候选集。

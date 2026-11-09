@@ -44,7 +44,7 @@ recent.append(current)
 
 ```bash
 cd agent/learning_lab
-PYTHONPATH=06-production:02-tools-workflow uvicorn stage06.app:app --reload
+PYTHONPATH=.:06-production:02-tools-workflow uvicorn stage06.app:app --reload
 ```
 
 另开终端：
